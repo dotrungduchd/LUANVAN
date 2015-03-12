@@ -1,0 +1,6 @@
+E:\HK1_14-15\KhoaLuan\DemoUSBRemovalDetection\DemoUSBRemovalDetection\bin\Release\DemoUSBRemovalDetection.exe.config
+E:\HK1_14-15\KhoaLuan\DemoUSBRemovalDetection\DemoUSBRemovalDetection\bin\Release\DemoUSBRemovalDetection.exe
+E:\HK1_14-15\KhoaLuan\DemoUSBRemovalDetection\DemoUSBRemovalDetection\bin\Release\DemoUSBRemovalDetection.pdb
+E:\HK1_14-15\KhoaLuan\DemoUSBRemovalDetection\DemoUSBRemovalDetection\obj\Release\DemoUSBRemovalDetection.csprojResolveAssemblyReference.cache
+E:\HK1_14-15\KhoaLuan\DemoUSBRemovalDetection\DemoUSBRemovalDetection\obj\Release\DemoUSBRemovalDetection.exe
+E:\HK1_14-15\KhoaLuan\DemoUSBRemovalDetection\DemoUSBRemovalDetection\obj\Release\DemoUSBRemovalDetection.pdb

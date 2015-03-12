@@ -1,0 +1,10 @@
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\InjectDLL\obj\Debug\InjectDLL.csprojResolveAssemblyReference.cache
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\InjectDLL\bin\Debug\InjectDLL.dll
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\InjectDLL\bin\Debug\InjectDLL.pdb
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\InjectDLL\bin\Debug\DemoHookSomeAPI.exe
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\InjectDLL\bin\Debug\EasyHook.dll
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\InjectDLL\bin\Debug\DemoHookSomeAPI.pdb
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\InjectDLL\obj\Debug\InjectDLL.dll
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\InjectDLL\obj\Debug\InjectDLL.pdb
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\DemoHookSomeAPI\bin\Debug\InjectDLL.dll
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\DemoHookSomeAPI\bin\Debug\InjectDLL.pdb

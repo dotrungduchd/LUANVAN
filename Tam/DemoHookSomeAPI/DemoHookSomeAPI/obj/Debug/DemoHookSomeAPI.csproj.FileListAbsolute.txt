@@ -1,0 +1,7 @@
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\DemoHookSomeAPI\bin\Debug\DemoHookSomeAPI.exe.config
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\DemoHookSomeAPI\obj\Debug\DemoHookSomeAPI.csprojResolveAssemblyReference.cache
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\DemoHookSomeAPI\bin\Debug\DemoHookSomeAPI.exe
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\DemoHookSomeAPI\bin\Debug\DemoHookSomeAPI.pdb
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\DemoHookSomeAPI\bin\Debug\EasyHook.dll
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\DemoHookSomeAPI\obj\Debug\DemoHookSomeAPI.exe
+E:\HK1_14-15\KhoaLuan\DemoHookSomeAPI\DemoHookSomeAPI\obj\Debug\DemoHookSomeAPI.pdb
