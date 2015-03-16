@@ -1,0 +1,18 @@
+﻿Build started 3/15/2015 9:02:53 PM.
+     1>Project "E:\HK1_14-15\KhoaLuan\DemoMinHook\DLLMinHook\DLLMinHook.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /I"E:\HK1_14-15\KhoaLuan\DemoMinHook\packages\minhook.1.3\build\native\..\..\lib\native\include" /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _WINDOWS /D _USRDLL /D DLLMINHOOK_EXPORTS /D _WINDLL /D _UNICODE /D UNICODE /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"Release\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt dllmain.cpp
+         dllmain.cpp
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"E:\HK1_14-15\KhoaLuan\DemoMinHook\Release\DLLMinHook.dll" /INCREMENTAL:NO /NOLOGO "E:\HK1_14-15\KhoaLuan\DemoMinHook\packages\minhook.1.3\build\native\..\..\lib\native\lib\libMinHook.lib" kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"E:\HK1_14-15\KhoaLuan\DemoMinHook\Release\DLLMinHook.pdb" /SUBSYSTEM:WINDOWS /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"E:\HK1_14-15\KhoaLuan\DemoMinHook\Release\DLLMinHook.lib" /MACHINE:X86 /SAFESEH /DLL Release\dllmain.obj
+         Release\DLLMinHook.obj
+         Release\stdafx.obj
+            Creating library E:\HK1_14-15\KhoaLuan\DemoMinHook\Release\DLLMinHook.lib and object E:\HK1_14-15\KhoaLuan\DemoMinHook\Release\DLLMinHook.exp
+         Generating code
+         Finished generating code
+         DLLMinHook.vcxproj -> E:\HK1_14-15\KhoaLuan\DemoMinHook\Release\DLLMinHook.dll
+     1>Done Building Project "E:\HK1_14-15\KhoaLuan\DemoMinHook\DLLMinHook\DLLMinHook.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:04.31
