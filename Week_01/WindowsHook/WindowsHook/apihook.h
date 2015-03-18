@@ -8,7 +8,7 @@ typedef struct _API_HOOK
 	PVOID OrigFunction;
 }API_HOOK,*PAPI_HOOK;
 
-BOOL WINAPI InitAPIHook(PAPI_HOOK Hook,char* szModuleName,char* szFunctionName,PVOID HookFunction)
+BOOL WINAPI InitAPIHook(PAPI_HOOK Hook,wchar_t* szModuleName,char* szFunctionName,PVOID HookFunction)
 {
 	HMODULE hModule;
 	ULONG OrigFunction,FunctionAddress;
