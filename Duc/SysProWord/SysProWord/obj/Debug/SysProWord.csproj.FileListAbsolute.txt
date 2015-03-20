@@ -1,0 +1,11 @@
+D:\Code\LUANVAN\Duc\SysProWord\SysProWord\bin\Debug\SysProWord.dll
+D:\Code\LUANVAN\Duc\SysProWord\SysProWord\bin\Debug\SysProWord.pdb
+D:\Code\LUANVAN\Duc\SysProWord\SysProWord\bin\Debug\SysProWord.dll.manifest
+D:\Code\LUANVAN\Duc\SysProWord\SysProWord\bin\Debug\SysProWord.vsto
+D:\Code\LUANVAN\Duc\SysProWord\SysProWord\bin\Debug\Microsoft.Office.Tools.Common.v4.0.Utilities.dll
+D:\Code\LUANVAN\Duc\SysProWord\SysProWord\bin\Debug\Microsoft.Office.Tools.Common.v4.0.Utilities.xml
+D:\Code\LUANVAN\Duc\SysProWord\SysProWord\obj\Debug\SysProWord.csprojResolveAssemblyReference.cache
+D:\Code\LUANVAN\Duc\SysProWord\SysProWord\obj\Debug\SysProWord.Properties.Resources.resources
+D:\Code\LUANVAN\Duc\SysProWord\SysProWord\obj\Debug\SysProWord.csproj.GenerateResource.Cache
+D:\Code\LUANVAN\Duc\SysProWord\SysProWord\obj\Debug\SysProWord.dll
+D:\Code\LUANVAN\Duc\SysProWord\SysProWord\obj\Debug\SysProWord.pdb
