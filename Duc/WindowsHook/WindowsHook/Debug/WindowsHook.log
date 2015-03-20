@@ -1,0 +1,19 @@
+﻿Build started 3/17/2015 10:02:14 PM.
+     1>Project "D:\Code\LUANVAN\Week_01\WindowsHook\WindowsHook\WindowsHook.vcxproj" on node 2 (Rebuild target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _WINDOWS /D _USRDLL /D WINDOWSHOOK_EXPORTS /D _WINDLL /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
+         main.cpp
+     1>d:\code\luanvan\week_01\windowshook\windowshook\apihook.h(15): warning C4309: 'initializing' : truncation of constant value
+     1>d:\code\luanvan\week_01\windowshook\windowshook\apihook.h(38): warning C4309: '=' : truncation of constant value
+     1>d:\code\luanvan\week_01\windowshook\windowshook\apihook.h(65): warning C4309: 'initializing' : truncation of constant value
+     1>d:\code\luanvan\week_01\windowshook\windowshook\apihook.h(74): warning C4309: '=' : truncation of constant value
+     1>d:\code\luanvan\week_01\windowshook\windowshook\main.cpp(253): warning C4101: 'tchar' : unreferenced local variable
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Code\LUANVAN\Week_01\WindowsHook\Debug\WindowsHook.dll" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\Code\LUANVAN\Week_01\WindowsHook\Debug\WindowsHook.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Code\LUANVAN\Week_01\WindowsHook\Debug\WindowsHook.lib" /MACHINE:X86 /DLL Debug\main.obj
+            Creating library D:\Code\LUANVAN\Week_01\WindowsHook\Debug\WindowsHook.lib and object D:\Code\LUANVAN\Week_01\WindowsHook\Debug\WindowsHook.exp
+         WindowsHook.vcxproj -> D:\Code\LUANVAN\Week_01\WindowsHook\Debug\WindowsHook.dll
+     1>Done Building Project "D:\Code\LUANVAN\Week_01\WindowsHook\WindowsHook\WindowsHook.vcxproj" (Rebuild target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:01.37
