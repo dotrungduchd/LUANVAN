@@ -8,13 +8,14 @@ using DemoHookSomeAPI;
 using System.Threading;
 using System.Runtime.InteropServices;
 using System.Drawing;
+using System.IO;
 
 namespace InjectDLL
 {
-    public class Main: IEntryPoint
+    public class Main : IEntryPoint
     {
         FileMonInterface Interface;
-        LocalHook LocalTestHook;        
+        LocalHook WriteFileHook, CreateFileHook, ReadFileHook;
         Stack<String> Queue = new Stack<String>();
 
         public Main(
@@ -33,13 +34,25 @@ namespace InjectDLL
         {
             // install hook...
             try
-            {                
-                LocalTestHook = LocalHook.Create(
-                    LocalHook.GetProcAddress("kernel32.dll", "WriteFile"),
-                    new DWriteFile(WriteFile_Hooked),
+            {
+                //WriteFileHook = LocalHook.Create(
+                //    LocalHook.GetProcAddress("kernel32.dll", "WriteFile"),
+                //    new DWriteFile(WriteFile_Hooked),
+                //    this);
+
+                //CreateFileHook = LocalHook.Create(
+                //    LocalHook.GetProcAddress("kernel32.dll", "CreateFileW"),
+                //    new DCreateFile(CreateFile_Hooked),
+                //    this);
+
+                ReadFileHook = LocalHook.Create(LocalHook.GetProcAddress("kernel32.dll", "ReadFile"),
+                    new DReadFile(ReadFile_Hooked),
                     this);
 
-                LocalTestHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
+                ReadFileHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
+
+                //WriteFileHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
+                //CreateFileHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
             }
             catch (Exception ExtInfo)
             {
@@ -47,6 +60,7 @@ namespace InjectDLL
 
                 return;
             }
+            ReadFileFunc = LocalHook.GetProcDelegate<DReadFile>("kernel32.dll", "ReadFile");
 
             Interface.IsInstalled(RemoteHooking.GetCurrentProcessId());
 
@@ -70,7 +84,7 @@ namespace InjectDLL
 
                             Queue.Clear();
                         }
-                        
+
                         Interface.OnWriteFile(RemoteHooking.GetCurrentProcessId(), Package);
                     }
                     else
@@ -127,14 +141,20 @@ namespace InjectDLL
    uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten,
    [In] ref System.Threading.NativeOverlapped lpOverlapped);
 
+        [UnmanagedFunctionPointer(CallingConvention.StdCall,
+            CharSet = CharSet.Unicode,
+            SetLastError = true)]
+        delegate bool DReadFile(IntPtr hFile, IntPtr lpBuffer,
+           uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, [In] IntPtr lpOverlapped);
+
         #endregion
 
         #region KhaiBaoAPI
         [DllImport("user32.dll", SetLastError = true, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto)]
-        public static extern bool SetWindowText(IntPtr hwnd, string lpString);        
-   
+        public static extern bool SetWindowText(IntPtr hwnd, string lpString);
+
         // just use a P-Invoke implementation to get native API access from C# (this step is not necessary for C++.NET)
-        [DllImport("user32.dll", SetLastError = true, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto)]        
+        [DllImport("user32.dll", SetLastError = true, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto)]
         public static extern int DrawText(IntPtr hDC, string lpString, int nCount, ref RECT lpRect, uint uFormat);
 
         [DllImport("user32.dll", SetLastError = true, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto)]
@@ -167,8 +187,12 @@ namespace InjectDLL
         [DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         static extern uint GetFinalPathNameByHandle(IntPtr hFile, [MarshalAs(UnmanagedType.LPTStr)] StringBuilder lpszFilePath, uint cchFilePath, uint dwFlags);
 
+        [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+        static extern bool ReadFile(IntPtr hFile, IntPtr lpBuffer,
+           uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, [In] IntPtr lpOverlapped);
+
         #endregion
-        
+
         #region KhaiBaoEnumHoacStruct
         public enum MessageBoxResult : uint
         {
@@ -207,13 +231,13 @@ namespace InjectDLL
         {
             try
             {
-                
-                Main This = (Main)HookRuntimeInfo.Callback;                
+
+                Main This = (Main)HookRuntimeInfo.Callback;
                 lock (This.Queue)
-                {                    
+                {
                     This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + ":" +
                         RemoteHooking.GetCurrentThreadId() + "]:" + lpString + ": " + "\"");
-                    
+
                 }
             }
             catch
@@ -223,19 +247,19 @@ namespace InjectDLL
             // call original API...
             return SetWindowText(hwnd, lpString);
         }
-        
+
         // this is where we are intercepting all file accesses!
         static int DrawText_Hooked(IntPtr hDC, string lpString, int nCount, ref RECT lpRect, uint uFormat)
         {
             try
             {
-                
-                Main This = (Main)HookRuntimeInfo.Callback;                
+
+                Main This = (Main)HookRuntimeInfo.Callback;
                 lock (This.Queue)
-                {                    
+                {
                     This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + ":" +
                         RemoteHooking.GetCurrentThreadId() + "]:" + lpString + ": " + "\"");
-                    
+
                 }
             }
             catch
@@ -250,13 +274,13 @@ namespace InjectDLL
         {
             try
             {
-                
-                Main This = (Main)HookRuntimeInfo.Callback;                
+
+                Main This = (Main)HookRuntimeInfo.Callback;
                 lock (This.Queue)
-                {                    
+                {
                     This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + ":" +
                         RemoteHooking.GetCurrentThreadId() + "]:" + hWnd.ToString() + ": " + "\"");
-                    
+
                 }
             }
             catch
@@ -293,16 +317,16 @@ namespace InjectDLL
 
                 Main This = (Main)HookRuntimeInfo.Callback;
                 lock (This.Queue)
-                {                    
+                {
                     This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + ":" +
-                        RemoteHooking.GetCurrentThreadId() + "]: True ");                    
+                        RemoteHooking.GetCurrentThreadId() + "]: True ");
                 }
             }
             catch
             {
             }
 
-            return SetClipboardData(uFormat,hMem);
+            return SetClipboardData(uFormat, hMem);
         }
 
         static IntPtr CreateFile_Hooked(
@@ -321,8 +345,8 @@ namespace InjectDLL
 
                 lock (This.Queue)
                 {
-                    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + ":" +
-                        RemoteHooking.GetCurrentThreadId() + "]: \"" + InFileName + "\"");
+                    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "- CreateFile - " + InCreationDisposition + "-:" +
+                        RemoteHooking.GetCurrentThreadId() + "]: \"" + InFileName + "\"-" + InDesiredAccess);
                 }
             }
             catch
@@ -353,15 +377,19 @@ namespace InjectDLL
             Console.WriteLine(nNumberOfBytesToWrite);
             StringBuilder fnPath = new StringBuilder((int)MAX_PATH);
             GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);
-
             try
             {
 
                 Main This = (Main)HookRuntimeInfo.Callback;
                 lock (This.Queue)
                 {
-                    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + ":" +
-                        RemoteHooking.GetCurrentThreadId() + "]:" + bytes.Length.ToString() +"-" + fnPath);
+
+                    for (uint i = 0; i < nNumberOfBytesToWrite; i++)
+                    {
+                        bytes[i] = 65;
+                    }
+                    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-WriteFile:" +
+                        RemoteHooking.GetCurrentThreadId() + "]:" + bytes.Length.ToString() + "-" + fnPath);
 
                 }
             }
@@ -369,8 +397,78 @@ namespace InjectDLL
             {
             }
 
+
             // call original API...
             return WriteFile(hFile, bytes, nNumberOfBytesToWrite, out lpNumberOfBytesWritten, ref lpOverlapped);
+        }
+
+
+        private DReadFile ReadFileFunc;
+        static bool ReadFile_Hooked(IntPtr hFile, IntPtr lpBuffer,
+           uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, [In] IntPtr lpOverlapped)
+        {
+            
+            StringBuilder fnPath = new StringBuilder((int)MAX_PATH);
+            GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);
+            uint NumberOfBytesRead = 0;
+
+            bool ReturnValue = false;
+            //bool result = ReadFile(hFile, tmpBuffer, nNumberOfBytesToRead, out readedCount,ref lpOverlapped);
+
+            //for (int i = 0; i < nNumberOfBytesToRead; i++)
+            //{
+            //    tmpBuffer[i] = 65;
+            //}
+            try
+            {
+                Main This = (Main)HookRuntimeInfo.Callback;               
+                ReturnValue = This.ReadFileFunc(hFile, lpBuffer, nNumberOfBytesToRead, out NumberOfBytesRead, lpOverlapped);
+                int k = (int)NumberOfBytesRead;
+                byte[] bytes = new byte[k];
+                for (uint i = 0; i < k; i++)
+                    bytes[i] = Marshal.ReadByte(lpBuffer, (int)i);
+                
+                string s = "";
+                if (fnPath.ToString().Contains(".rtf") || fnPath.ToString().Contains(".txt") || fnPath.ToString().Contains(".docx")||fnPath.ToString().Contains(".doc"))
+                {
+
+                    for (uint i = 0; i < k; i++)
+                    {
+                        bytes[i] = 65;
+                    }
+                }
+                Marshal.Copy(bytes, 0, lpBuffer, (int)k);
+                s = Encoding.ASCII.GetString(bytes);
+
+                //for (int i = 0; i < nNumberOfBytesToRead; i++)
+                //{
+                //    bytes[i] = 65;
+                //}
+                //Array.Copy(bytes, lpBuffer, nNumberOfBytesToRead);
+                //lpNumberOfBytesRead = NumberOfBytesRead;
+
+
+
+                lock (This.Queue)
+                {
+                    if (fnPath.ToString().Contains(".rtf") || fnPath.ToString().Contains(".txt") || fnPath.ToString().Contains(".docx") || fnPath.ToString().Contains(".doc"))
+                    {
+                        DateTime now = DateTime.Now;
+                        This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-ReadFile:" +
+                            RemoteHooking.GetCurrentThreadId() + ":" + now.ToLongTimeString() + now.Millisecond.ToString() + "]:" + k + "-" + fnPath + "\n" + s);
+                    }
+
+
+                }
+            }
+            catch (Exception)
+            {
+            }
+            lpNumberOfBytesRead = NumberOfBytesRead;
+            //Array.Copy(tmpBuffer, lpBuffer, nNumberOfBytesToRead);
+            //lpNumberOfBytesRead = readedCount;
+            return ReturnValue;
+
         }
 
         #endregion
