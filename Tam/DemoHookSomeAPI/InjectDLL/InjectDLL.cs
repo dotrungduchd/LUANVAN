@@ -1,4 +1,5 @@
-﻿using EasyHook;
+﻿//compile with: /unsafe
+using EasyHook;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -137,7 +138,7 @@ namespace InjectDLL
         [UnmanagedFunctionPointer(CallingConvention.StdCall,
             CharSet = CharSet.Unicode,
             SetLastError = true)]
-        delegate bool DWriteFile(IntPtr hFile, byte[] lpBuffer,
+        delegate bool DWriteFile(IntPtr hFile, IntPtr lpBuffer,
    uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten,
    [In] ref System.Threading.NativeOverlapped lpOverlapped);
 
@@ -145,7 +146,7 @@ namespace InjectDLL
             CharSet = CharSet.Unicode,
             SetLastError = true)]
         delegate bool DReadFile(IntPtr hFile, IntPtr lpBuffer,
-           uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, [In] IntPtr lpOverlapped);
+           uint nNumberOfBytesToRead, IntPtr lpNumberOfBytesRead, [In] ref System.Threading.NativeOverlapped lpOverlapped);
 
         #endregion
 
@@ -180,7 +181,7 @@ namespace InjectDLL
             IntPtr InTemplateFile);
 
         [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
-        public static extern bool WriteFile(IntPtr hFile, byte[] lpBuffer,
+        public static extern bool WriteFile(IntPtr hFile, IntPtr lpBuffer,
    uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten,
    [In] ref System.Threading.NativeOverlapped lpOverlapped);
 
@@ -189,7 +190,14 @@ namespace InjectDLL
 
         [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
         static extern bool ReadFile(IntPtr hFile, IntPtr lpBuffer,
-           uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, [In] IntPtr lpOverlapped);
+           uint nNumberOfBytesToRead,IntPtr lpNumberOfBytesRead, [In] ref System.Threading.NativeOverlapped lpOverlapped);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool VirtualProtect(IntPtr lpAddress, uint dwSize,
+           uint flNewProtect, out uint lpflOldProtect);
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+        public static extern void OutputDebugString(string message);
+
 
         #endregion
 
@@ -224,6 +232,22 @@ namespace InjectDLL
 
         private const uint FILE_NAME_NORMALIZED = 0x0;
         private const uint MAX_PATH = 260;
+        public enum Protection
+        {
+            PAGE_NOACCESS = 0x01,
+            PAGE_READONLY = 0x02,
+            PAGE_READWRITE = 0x04,
+            PAGE_WRITECOPY = 0x08,
+            PAGE_EXECUTE = 0x10,
+            PAGE_EXECUTE_READ = 0x20,
+            PAGE_EXECUTE_READWRITE = 0x40,
+            PAGE_EXECUTE_WRITECOPY = 0x80,
+            PAGE_GUARD = 0x100,
+            PAGE_NOCACHE = 0x200,
+            PAGE_WRITECOMBINE = 0x400
+        }
+
+
         #endregion
 
         #region KhaiBaoHookedFunction
@@ -364,7 +388,7 @@ namespace InjectDLL
                 InTemplateFile);
         }
 
-        static bool WriteFile_Hooked(IntPtr hFile, byte[] lpBuffer,
+        static bool WriteFile_Hooked(IntPtr hFile, IntPtr lpBuffer,
                 uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten,
                 [In] ref System.Threading.NativeOverlapped lpOverlapped)
         {
@@ -376,18 +400,22 @@ namespace InjectDLL
             }
             Console.WriteLine(nNumberOfBytesToWrite);
             StringBuilder fnPath = new StringBuilder((int)MAX_PATH);
-            GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);
+            GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);            
             try
             {
 
                 Main This = (Main)HookRuntimeInfo.Callback;
                 lock (This.Queue)
                 {
-
-                    for (uint i = 0; i < nNumberOfBytesToWrite; i++)
+                    if (fnPath.ToString().Contains("Encryption"))
                     {
-                        bytes[i] = 65;
+                        for (uint i = 0; i < nNumberOfBytesToWrite; i++)
+                        {                            
+                            bytes[i] += 1;                            
+                        }
+                        Marshal.Copy(bytes, 0, lpBuffer,(int) nNumberOfBytesToWrite);
                     }
+                    
                     This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-WriteFile:" +
                         RemoteHooking.GetCurrentThreadId() + "]:" + bytes.Length.ToString() + "-" + fnPath);
 
@@ -399,76 +427,78 @@ namespace InjectDLL
 
 
             // call original API...
-            return WriteFile(hFile, bytes, nNumberOfBytesToWrite, out lpNumberOfBytesWritten, ref lpOverlapped);
+            return WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, out lpNumberOfBytesWritten, ref lpOverlapped);
         }
 
 
         private DReadFile ReadFileFunc;
         static bool ReadFile_Hooked(IntPtr hFile, IntPtr lpBuffer,
-           uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, [In] IntPtr lpOverlapped)
+           uint nNumberOfBytesToRead, IntPtr lpNumberOfBytesRead, [In] ref System.Threading.NativeOverlapped lpOverlapped)
         {
             
             StringBuilder fnPath = new StringBuilder((int)MAX_PATH);
             GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);
             uint NumberOfBytesRead = 0;
-
-            bool ReturnValue = false;
-            //bool result = ReadFile(hFile, tmpBuffer, nNumberOfBytesToRead, out readedCount,ref lpOverlapped);
-
-            //for (int i = 0; i < nNumberOfBytesToRead; i++)
-            //{
-            //    tmpBuffer[i] = 65;
-            //}
+            uint oldProt;
+            
+            bool ReturnValue = false;   
+            
             try
             {
-                Main This = (Main)HookRuntimeInfo.Callback;               
-                ReturnValue = This.ReadFileFunc(hFile, lpBuffer, nNumberOfBytesToRead, out NumberOfBytesRead, lpOverlapped);
-                int k = (int)NumberOfBytesRead;
-                byte[] bytes = new byte[k];
-                for (uint i = 0; i < k; i++)
-                    bytes[i] = Marshal.ReadByte(lpBuffer, (int)i);
-                
-                string s = "";
-                if (fnPath.ToString().Contains(".rtf") || fnPath.ToString().Contains(".txt") || fnPath.ToString().Contains(".docx")||fnPath.ToString().Contains(".doc"))
+                Main This = (Main)HookRuntimeInfo.Callback;
+                //uint oldProtection;
+                //VirtualProtect(tmpP, sizeof(uint), (uint)Protection.PAGE_EXECUTE_READWRITE, out oldProt);                               
+                ReturnValue = This.ReadFileFunc(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead,ref lpOverlapped);
+                //NumberOfBytesRead = lpNumberOfBytesRead;                
+                int bytesCount = (int)nNumberOfBytesToRead;
+                if (!lpNumberOfBytesRead.Equals(IntPtr.Zero))
                 {
+                    bytesCount = Marshal.ReadInt32(lpNumberOfBytesRead);
 
-                    for (uint i = 0; i < k; i++)
+                }
+                else
+                {
+                    bytesCount = lpOverlapped.InternalHigh.ToInt32();
+                }
+                //if (!lpOverlapped.InternalHigh.Equals(null))
+                //{
+                //    bytesCount = Marshal.ReadInt32(lpOverlapped.InternalHigh);
+                //}
+                byte[] bytes = new byte[bytesCount];
+                for (uint i = 0; i < bytesCount; i++)
+                    bytes[i] = Marshal.ReadByte(lpBuffer, (int)i);
+                string s = "";
+                if (fnPath.ToString().Contains(".rtf") || fnPath.ToString().Contains(".txt") || fnPath.ToString().Contains(".docx") || fnPath.ToString().Contains(".doc"))
+                {
+                    if (fnPath.ToString().Contains("Encryption"))
                     {
-                        bytes[i] = 65;
+                        for (uint i = 0; i < bytesCount; i++)
+                        {
+                            bytes[i] -= 1;
+                        }
+                        Marshal.Copy(bytes, 0, lpBuffer, (int)bytesCount);
                     }
                 }
-                Marshal.Copy(bytes, 0, lpBuffer, (int)k);
                 s = Encoding.ASCII.GetString(bytes);
-
-                //for (int i = 0; i < nNumberOfBytesToRead; i++)
-                //{
-                //    bytes[i] = 65;
-                //}
-                //Array.Copy(bytes, lpBuffer, nNumberOfBytesToRead);
-                //lpNumberOfBytesRead = NumberOfBytesRead;
-
-
-
                 lock (This.Queue)
                 {
                     if (fnPath.ToString().Contains(".rtf") || fnPath.ToString().Contains(".txt") || fnPath.ToString().Contains(".docx") || fnPath.ToString().Contains(".doc"))
                     {
-                        DateTime now = DateTime.Now;
-                        This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-ReadFile:" +
-                            RemoteHooking.GetCurrentThreadId() + ":" + now.ToLongTimeString() + now.Millisecond.ToString() + "]:" + k + "-" + fnPath + "\n" + s);
+                        if (fnPath.ToString().Contains("Encryption"))
+                        {
+                            DateTime now = DateTime.Now;
+                            This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-ReadFile:" +
+                                RemoteHooking.GetCurrentThreadId() + ":" + now.ToLongTimeString() + now.Millisecond.ToString() + "]:" + bytesCount + "-" + fnPath + "\n" + s);
+                        }
                     }
-
-
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-            }
-            lpNumberOfBytesRead = NumberOfBytesRead;
-            //Array.Copy(tmpBuffer, lpBuffer, nNumberOfBytesToRead);
-            //lpNumberOfBytesRead = readedCount;
+                OutputDebugString(ex.Message);
+            }            
             return ReturnValue;
-
+            
         }
 
         #endregion
