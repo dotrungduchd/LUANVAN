@@ -36,10 +36,10 @@ namespace InjectDLL
             // install hook...
             try
             {
-                //WriteFileHook = LocalHook.Create(
-                //    LocalHook.GetProcAddress("kernel32.dll", "WriteFile"),
-                //    new DWriteFile(WriteFile_Hooked),
-                //    this);
+                WriteFileHook = LocalHook.Create(
+                    LocalHook.GetProcAddress("kernel32.dll", "WriteFile"),
+                    new DWriteFile(WriteFile_Hooked),
+                    this);
 
                 //CreateFileHook = LocalHook.Create(
                 //    LocalHook.GetProcAddress("kernel32.dll", "CreateFileW"),
@@ -52,7 +52,7 @@ namespace InjectDLL
 
                 ReadFileHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
 
-                //WriteFileHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
+                WriteFileHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
                 //CreateFileHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
             }
             catch (Exception ExtInfo)
@@ -190,7 +190,7 @@ namespace InjectDLL
 
         [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
         static extern bool ReadFile(IntPtr hFile, IntPtr lpBuffer,
-           uint nNumberOfBytesToRead,IntPtr lpNumberOfBytesRead, [In] ref System.Threading.NativeOverlapped lpOverlapped);
+           uint nNumberOfBytesToRead, IntPtr lpNumberOfBytesRead, [In] ref System.Threading.NativeOverlapped lpOverlapped);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool VirtualProtect(IntPtr lpAddress, uint dwSize,
@@ -393,32 +393,27 @@ namespace InjectDLL
                 [In] ref System.Threading.NativeOverlapped lpOverlapped)
         {
 
-            byte[] bytes = new byte[nNumberOfBytesToWrite];
-            for (uint i = 0; i < nNumberOfBytesToWrite; i++)
-            {
-                bytes[i] = Marshal.ReadByte(lpBuffer, (int)i);
-            }
+            byte[] bytes = ReadDataFromPointer(lpBuffer, nNumberOfBytesToWrite);
             Console.WriteLine(nNumberOfBytesToWrite);
             StringBuilder fnPath = new StringBuilder((int)MAX_PATH);
-            GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);            
+            GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);
+            string filePath = fnPath.ToString();
             try
             {
 
                 Main This = (Main)HookRuntimeInfo.Callback;
                 lock (This.Queue)
                 {
-                    if (fnPath.ToString().Contains("Encryption"))
+                    if (filePath.Contains("Encryption"))
                     {
                         for (uint i = 0; i < nNumberOfBytesToWrite; i++)
-                        {                            
-                            bytes[i] += 1;                            
+                        {
+                            bytes[i] += 1;
                         }
-                        Marshal.Copy(bytes, 0, lpBuffer,(int) nNumberOfBytesToWrite);
-                    }
-                    
-                    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-WriteFile:" +
+                        Marshal.Copy(bytes, 0, lpBuffer, (int)nNumberOfBytesToWrite);
+                        This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-WriteFile:" +
                         RemoteHooking.GetCurrentThreadId() + "]:" + bytes.Length.ToString() + "-" + fnPath);
-
+                    }
                 }
             }
             catch
@@ -430,47 +425,49 @@ namespace InjectDLL
             return WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, out lpNumberOfBytesWritten, ref lpOverlapped);
         }
 
+        private static byte[] ReadDataFromPointer(IntPtr lpBuffer, uint nNumberOfBytesToWrite)
+        {
+            byte[] bytes = new byte[nNumberOfBytesToWrite];
+            for (uint i = 0; i < nNumberOfBytesToWrite; i++)
+            {
+                bytes[i] = Marshal.ReadByte(lpBuffer, (int)i);
+            }
+            return bytes;
+        }
+
 
         private DReadFile ReadFileFunc;
         static bool ReadFile_Hooked(IntPtr hFile, IntPtr lpBuffer,
            uint nNumberOfBytesToRead, IntPtr lpNumberOfBytesRead, [In] ref System.Threading.NativeOverlapped lpOverlapped)
         {
-            
+
             StringBuilder fnPath = new StringBuilder((int)MAX_PATH);
             GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);
-            uint NumberOfBytesRead = 0;
-            uint oldProt;
-            
-            bool ReturnValue = false;   
-            
-            try
+            bool ReturnValue = false;
+            string filePath = fnPath.ToString();
+            if ((!filePath.Contains("Encryption")) || (!CheckExtension(filePath)))
+            {                
+                return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
+            }
+            else
             {
-                Main This = (Main)HookRuntimeInfo.Callback;
-                //uint oldProtection;
-                //VirtualProtect(tmpP, sizeof(uint), (uint)Protection.PAGE_EXECUTE_READWRITE, out oldProt);                               
-                ReturnValue = This.ReadFileFunc(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead,ref lpOverlapped);
-                //NumberOfBytesRead = lpNumberOfBytesRead;                
-                int bytesCount = (int)nNumberOfBytesToRead;
-                if (!lpNumberOfBytesRead.Equals(IntPtr.Zero))
+                try
                 {
-                    bytesCount = Marshal.ReadInt32(lpNumberOfBytesRead);
-
-                }
-                else
-                {
-                    bytesCount = lpOverlapped.InternalHigh.ToInt32();
-                }
-                //if (!lpOverlapped.InternalHigh.Equals(null))
-                //{
-                //    bytesCount = Marshal.ReadInt32(lpOverlapped.InternalHigh);
-                //}
-                byte[] bytes = new byte[bytesCount];
-                for (uint i = 0; i < bytesCount; i++)
-                    bytes[i] = Marshal.ReadByte(lpBuffer, (int)i);
-                string s = "";
-                if (fnPath.ToString().Contains(".rtf") || fnPath.ToString().Contains(".txt") || fnPath.ToString().Contains(".docx") || fnPath.ToString().Contains(".doc"))
-                {
-                    if (fnPath.ToString().Contains("Encryption"))
+                    Main This = (Main)HookRuntimeInfo.Callback;
+                    ReturnValue = This.ReadFileFunc(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
+                    OutputDebugString("Da goi duoc API goc - " + nNumberOfBytesToRead );
+                    int bytesCount = (int)nNumberOfBytesToRead;
+                    if (!lpNumberOfBytesRead.Equals(IntPtr.Zero))
+                    {
+                        bytesCount = Marshal.ReadInt32(lpNumberOfBytesRead);
+                    }
+                    else
+                    {
+                        bytesCount = lpOverlapped.InternalHigh.ToInt32();
+                    }
+                    byte[] bytes = ReadDataFromPointer(lpBuffer,(uint) bytesCount);                   
+                    bool ValidExtension = CheckExtension(filePath);
+                    if (ValidExtension)
                     {
                         for (uint i = 0; i < bytesCount; i++)
                         {
@@ -478,27 +475,28 @@ namespace InjectDLL
                         }
                         Marshal.Copy(bytes, 0, lpBuffer, (int)bytesCount);
                     }
-                }
-                s = Encoding.ASCII.GetString(bytes);
-                lock (This.Queue)
-                {
-                    if (fnPath.ToString().Contains(".rtf") || fnPath.ToString().Contains(".txt") || fnPath.ToString().Contains(".docx") || fnPath.ToString().Contains(".doc"))
+                    OutputDebugString("Da thay doi du lieu");
+                    lock (This.Queue)
                     {
-                        if (fnPath.ToString().Contains("Encryption"))
+                        if (ValidExtension)
                         {
                             DateTime now = DateTime.Now;
                             This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-ReadFile:" +
-                                RemoteHooking.GetCurrentThreadId() + ":" + now.ToLongTimeString() + now.Millisecond.ToString() + "]:" + bytesCount + "-" + fnPath + "\n" + s);
+                                RemoteHooking.GetCurrentThreadId() + ":" + bytesCount + "]:" + "-" + fnPath + "\n");
                         }
                     }
                 }
+                catch (Exception ex)
+                {
+                    OutputDebugString(ex.Message);
+                }
+                return ReturnValue;
             }
-            catch (Exception ex)
-            {
-                OutputDebugString(ex.Message);
-            }            
-            return ReturnValue;
-            
+        }
+
+        private static bool CheckExtension(string filePath)
+        {
+            return filePath.Contains(".rtf") || filePath.Contains(".txt") || filePath.Contains(".docx") || filePath.Contains(".doc") || filePath.Contains(".bmp") || filePath.Contains(".png") || filePath.Contains(".exe") || filePath.Contains(".jpg") || filePath.Contains(".mp3");
         }
 
         #endregion
