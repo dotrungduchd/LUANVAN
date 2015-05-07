@@ -1,0 +1,5 @@
+E:\HK1_14-15\KhoaLuan\GitHub\LUANVAN\Tam\DemoHookAPIWithNewVersionDLL\DemoHookAPIWithNewVersionDLL\obj\Debug\DemoHookAPIWithNewVersionDLL.csprojResolveAssemblyReference.cache
+E:\HK1_14-15\KhoaLuan\GitHub\LUANVAN\Tam\DemoHookAPIWithNewVersionDLL\DemoHookAPIWithNewVersionDLL\bin\Debug\DemoHookAPIWithNewVersionDLL.exe
+E:\HK1_14-15\KhoaLuan\GitHub\LUANVAN\Tam\DemoHookAPIWithNewVersionDLL\DemoHookAPIWithNewVersionDLL\bin\Debug\DemoHookAPIWithNewVersionDLL.pdb
+E:\HK1_14-15\KhoaLuan\GitHub\LUANVAN\Tam\DemoHookAPIWithNewVersionDLL\DemoHookAPIWithNewVersionDLL\obj\Debug\DemoHookAPIWithNewVersionDLL.exe
+E:\HK1_14-15\KhoaLuan\GitHub\LUANVAN\Tam\DemoHookAPIWithNewVersionDLL\DemoHookAPIWithNewVersionDLL\obj\Debug\DemoHookAPIWithNewVersionDLL.pdb
