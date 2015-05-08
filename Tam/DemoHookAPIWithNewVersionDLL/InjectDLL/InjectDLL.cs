@@ -90,7 +90,7 @@ namespace InjectDLL
 
                     // transmit newly monitored file accesses...
 
-                    if (pIdQueue.Count > 0)
+                    if (pIdQueue.Count > 0 && cpParams.Count > 2)
                     {
                         Int32[] Package = null;
                         lock (pIdQueue)
@@ -98,7 +98,17 @@ namespace InjectDLL
                             Package = pIdQueue.ToArray();
                             pIdQueue.Clear();
                         }
-                        Interface.OnCreateProcess(RemoteHooking.GetCurrentProcessId(), Package, oldThrId, thrOldLvl, this.myChannelName);
+                        string lpApplicationName = "";
+                        string lpCommandline = "";
+                        uint dwCreationFlags = 0;
+                        lock (cpParams)
+                        {
+                            lpApplicationName = (string)cpParams["ApplicationName"];
+                            lpCommandline = (string)cpParams["CommandLine"];
+                            dwCreationFlags = (uint)cpParams["CreationFlags"];
+                            cpParams.Clear();
+                        }
+                        Interface.OnCreateProcess(RemoteHooking.GetCurrentProcessId(), Package, oldThrId, thrOldLvl,lpApplicationName,lpCommandline,0,this.myChannelName);
                     }
                     //if (cpParams.Count > 2)
                     //{
@@ -137,12 +147,15 @@ namespace InjectDLL
 
 
                 }
+                
             }
             catch (Exception ex)
             {
+                
                 Interface.ReportException(ex);
                 // Ping() will raise an exception if host is unreachable
             }
+            
         }
         #region KhaiBaoDelegate
         [UnmanagedFunctionPointer(CallingConvention.StdCall,
@@ -398,107 +411,6 @@ namespace InjectDLL
         #endregion
 
         #region KhaiBaoHookedFunction
-        static bool SetWindowText_Hooked(IntPtr hwnd, string lpString)
-        {
-            try
-            {
-
-                Main This = (Main)HookRuntimeInfo.Callback;
-                lock (This.Queue)
-                {
-                    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + ":" +
-                        RemoteHooking.GetCurrentThreadId() + "]:" + lpString + ": " + "\"");
-
-                }
-            }
-            catch
-            {
-            }
-
-            // call original API...
-            return SetWindowText(hwnd, lpString);
-        }
-
-        // this is where we are intercepting all file accesses!
-        static int DrawText_Hooked(IntPtr hDC, string lpString, int nCount, ref RECT lpRect, uint uFormat)
-        {
-            try
-            {
-
-                Main This = (Main)HookRuntimeInfo.Callback;
-                lock (This.Queue)
-                {
-                    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + ":" +
-                        RemoteHooking.GetCurrentThreadId() + "]:" + lpString + ": " + "\"");
-
-                }
-            }
-            catch
-            {
-            }
-
-            // call original API...
-            return DrawText(hDC, lpString, nCount, ref lpRect, uFormat);
-        }
-
-        static int SetWindowRgn_Hooked(IntPtr hWnd, IntPtr hRgn, bool bRedraw)
-        {
-            try
-            {
-
-                Main This = (Main)HookRuntimeInfo.Callback;
-                lock (This.Queue)
-                {
-                    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + ":" +
-                        RemoteHooking.GetCurrentThreadId() + "]:" + hWnd.ToString() + ": " + "\"");
-
-                }
-            }
-            catch
-            {
-            }
-
-            // call original API...
-            return SetWindowRgn(hWnd, hRgn, bRedraw);
-        }
-        static bool CloseClipboard_Hooked()
-        {
-            try
-            {
-
-                Main This = (Main)HookRuntimeInfo.Callback;
-                lock (This.Queue)
-                {
-                    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + ":" +
-                        RemoteHooking.GetCurrentThreadId() + "]: True");
-
-                }
-            }
-            catch
-            {
-            }
-
-            return CloseClipboard();
-        }
-
-        static IntPtr SetClipboardData_Hooked(uint uFormat, IntPtr hMem)
-        {
-            try
-            {
-
-                Main This = (Main)HookRuntimeInfo.Callback;
-                lock (This.Queue)
-                {
-                    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + ":" +
-                        RemoteHooking.GetCurrentThreadId() + "]: True ");
-                }
-            }
-            catch
-            {
-            }
-
-            return SetClipboardData(uFormat, hMem);
-        }
 
         static IntPtr CreateFile_Hooked(
             String InFileName,
@@ -658,23 +570,32 @@ namespace InjectDLL
             PROCESS_INFORMATION proInformation = new PROCESS_INFORMATION();
             bool ReturnValue = false;
             int processId = 0;
+            Main This = (Main)HookRuntimeInfo.Callback;
             try
-            {
-
-                Main This = (Main)HookRuntimeInfo.Callback;
-
-                
+            { 
                 //dwCreationFlags = dwCreationFlags | 0x00000004;
 
                 ReturnValue = CreateProcess(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, false, dwCreationFlags, lpEnvironment, null, ref lpStartupInfo, out proInformation);
-                Process pro = Process.GetProcessById(proInformation.dwProcessId);
-                This.oldThrId = proInformation.dwThreadId;
-                foreach (ProcessThread thread in pro.Threads)
+                while (true)
                 {
-                    if (thread.Id == proInformation.dwThreadId)
+                    try
                     {
-                        This.thrOldLvl = thread.PriorityLevel;
-                        thread.PriorityLevel = ThreadPriorityLevel.Idle;
+                        Process pro = Process.GetProcessById(proInformation.dwProcessId);                       
+                        This.oldThrId = proInformation.dwThreadId;
+                        foreach (ProcessThread thread in pro.Threads)
+                        {
+                            if (thread.Id == proInformation.dwThreadId)
+                            {
+                                This.thrOldLvl = thread.PriorityLevel;
+                                thread.PriorityLevel = ThreadPriorityLevel.Idle;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    catch (Exception)
+                    {
+                        continue;
                     }
                 }
 
@@ -705,34 +626,35 @@ namespace InjectDLL
                 {
                     DateTime now = DateTime.Now;
                     This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-CreateProcess:" +
-                        RemoteHooking.GetCurrentThreadId() + "]:" + "-" + lpApplicationName + "\n");
+                        RemoteHooking.GetCurrentThreadId() + "]:" + "-" + lpApplicationName +"-" + proInformation.dwProcessId + "\n");
 
                 }
                 lock (This.pIdQueue)
                 {
                     This.pIdQueue.Push(proInformation.dwProcessId);
                 }
-                //lock (This.cpParams)
-                //{
-                //    if (!This.cpParams.Keys.Contains("ApplicationName"))
-                //    {
-                //        This.cpParams.Add("ApplicationName", lpApplicationName);
-                //    }
-                //    if (!This.cpParams.Keys.Contains("CommandLine"))
-                //    {
-                //        This.cpParams.Add("CommandLine", lpCommandLine);
-                //    }
-                //    if (!This.cpParams.Keys.Contains("CreationFlags"))
-                //    {
-                //        This.cpParams.Add("CreationFlags", dwCreationFlags);
-                //    }
-                //}                
+                lock (This.cpParams)
+                {
+                    if (!This.cpParams.Keys.Contains("ApplicationName"))
+                    {
+                        This.cpParams.Add("ApplicationName", lpApplicationName);
+                    }
+                    if (!This.cpParams.Keys.Contains("CommandLine"))
+                    {
+                        This.cpParams.Add("CommandLine", lpCommandLine);
+                    }
+                    if (!This.cpParams.Keys.Contains("CreationFlags"))
+                    {
+                        This.cpParams.Add("CreationFlags", dwCreationFlags);
+                    }
+                }                
 
 
             }
             catch (Exception ex)
             {
-                OutputDebugString(ex.ToString());
+                OutputDebugString(ex.Message);
+                This.Interface.ReportException(ex);
             }
             lpProcessInformation = new PROCESS_INFORMATION();
             lpProcessInformation.dwProcessId = proInformation.dwProcessId;

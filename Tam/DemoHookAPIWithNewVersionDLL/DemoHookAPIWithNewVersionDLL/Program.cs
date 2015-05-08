@@ -13,7 +13,7 @@ namespace DemoHookAPIWithNewVersionDLL
     {
         public void IsInstalled(Int32 InClientPID)
         {
-            Console.WriteLine("FileMon has been installed in target {0}.\r\n", InClientPID);
+            Console.WriteLine("FileMon has been installed in target {0}.\r\n", InClientPID);            
         }
 
         public void OnWriteFile(Int32 InClientPID, String[] InFileNames)
@@ -27,37 +27,86 @@ namespace DemoHookAPIWithNewVersionDLL
         public void ReportException(Exception InInfo)
         {
             Console.WriteLine("The target process has reported an error:\r\n" + InInfo.ToString());
+
         }
 
-        public void OnCreateProcess(Int32 InClientPID, Int32[] pIds, int oldThrId, ThreadPriorityLevel oldThrLvl, string ChannelName)
+        public void OnCreateProcess(Int32 InClientPID, Int32[] pIds, int oldThrId, ThreadPriorityLevel oldThrLvl,string ApplicationName,string CommandLine,int CreationFlags,string ChannelName)
         {
+            bool first = true;
             for (int i = 0; i < pIds.Length; i++)
             {
-                try
+                if (!Global.hookProcessed.Contains(pIds[i]))
                 {
-                    RemoteHooking.Inject(pIds[i],
-                        "InjectDLL.dll",
-                        "InjectDLL.dll",
-                        ChannelName);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex);
-                }
-                Process pro = Process.GetProcessById(pIds[i]);
-                foreach (ProcessThread thread in pro.Threads)
-                {
-                    if (thread.Id == oldThrId)
-                        thread.PriorityLevel = oldThrLvl;
+                    while (true)
+                    {
+                        try
+                        {
+                            if (first)
+                            {                                
+                                Process pro = Process.GetProcessById(pIds[i]);
+                                RemoteHooking.Inject(pIds[i],
+                                    "InjectDLL.dll",
+                                    "InjectDLL.dll",
+                                    ChannelName);
+                                Global.hookProcessed.Add(InClientPID);
+                                foreach (ProcessThread thread in pro.Threads)
+                                {
+                                    if (thread.Id == oldThrId)
+                                        thread.PriorityLevel = oldThrLvl;
+                                }
+                            }
+                            else
+                            {
+                                int Processid = 0;
+                                //RemoteHooking.CreateAndInject(ApplicationName, CommandLine, CreationFlags, "InjectDLL.dll", "InjectDLL.dll",out Processid, ChannelName);
+                                Console.WriteLine(CommandLine);
+                                ProcessStartInfo startInfo = new ProcessStartInfo(ApplicationName,CommandLine);
+                                Process pro = Process.Start(startInfo);
+                                first = true;
+                                List<ThreadPriorityLevel> oldLvl = new List<ThreadPriorityLevel>();
+                                foreach (ProcessThread thread in pro.Threads)
+                                {
+                                    oldLvl.Add(thread.PriorityLevel);
+                                    thread.PriorityLevel = ThreadPriorityLevel.Idle;
+                                }
+                                RemoteHooking.Inject(pro.Id,
+                                   "InjectDLL.dll",
+                                   "InjectDLL.dll",
+                                   ChannelName);
+                                int cnt = 0;
+                                foreach (ProcessThread thread in pro.Threads)
+                                {
+                                    thread.PriorityLevel = oldLvl[cnt++];
+                                }
+                                
+                                
+                            }
+                            break;
+                        }
+                        catch (Exception ex)
+                        {
+                            Process[] errProc = Process.GetProcessesByName("WerFault.exe");
+                            for (int j = 0; j < errProc.Length; j++)
+                            {
+                                errProc[j].Kill();
+                            }
+                            Console.WriteLine(ex);                            
+                            first = false;
+                            continue;
+
+                        }
+                    }
                 }
             }
         }
 
         public string[] getExtensions()
         {
-            return Global.extensions;
+            return Global.extensions.ToArray();
         }
-        
+
+
+
         //public void OnCreateProcess(Int32 InClientPID, string lpApplicationName, string lpCommandLine, string ChannelName)
         //{
         //    //PROCESS_INFORMATION pInfo = new PROCESS_INFORMATION();
@@ -86,8 +135,9 @@ namespace DemoHookAPIWithNewVersionDLL
 
     public class Global
     {
-        public static string[] extensions = { ".rtf", ".txt",".docx",".doc",".mp3",".png",".jpg",".bmp",".flv",".jpeg",".exe",".mkv",".pdf",
+        public static List<string> extensions = new List<string>{ ".rtf", ".txt",".docx",".doc",".mp3",".png",".jpg",".bmp",".flv",".jpeg",".exe",".mkv",".pdf",
                                    ".xls",".cs",".xlsx",".ppt",".pptx"};
+        public static List<int> hookProcessed = new List<int>();
     }
 
     class Program
