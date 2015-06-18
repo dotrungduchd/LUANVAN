@@ -17,10 +17,11 @@ namespace InjectDLL
         public const int MAX_BUFFER_METADATA = 256;
         public const int MAX_BLOCK_SIZE = 1024;
         public const string path = @"data.tam";
+        public string currentDir = "";
         public const int FINAL_BLOCK = -1;
         byte[] dataIgnition, dataToEncrypt;
         ProcessInterface Interface;
-        LocalHook WriteFileHook, ReadFileHook, CreateProcessHook;
+        LocalHook WriteFileHook, ReadFileHook, CreateProcessHook,ReplaceFileHook;
         Stack<String> Queue = new Stack<String>();
         String myChannelName;
         const string Password = "testpassdine12345678";
@@ -46,6 +47,7 @@ namespace InjectDLL
             aes.Key = key.GetBytes(aes.KeySize / 8);
             aes.Padding = PaddingMode.Zeros;
             aes.Mode = CipherMode.CFB;
+            currentDir = Interface.GetCurrentDirectory() + "\\";            
             Interface.Ping();
         }
 
@@ -80,7 +82,13 @@ namespace InjectDLL
                     this);
 
                 CreateProcessHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
-                //CreateFileHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
+
+                ReplaceFileHook = LocalHook.Create(LocalHook.GetProcAddress("kernel32.dll", "ReplaceFileW"),
+                    new DReplaceFile(ReplaceFile_Hooked),
+                    this);
+
+                ReplaceFileHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
+                
             }
             catch (Exception ExtInfo)
             {
@@ -193,9 +201,21 @@ namespace InjectDLL
             [In] ref STARTUPINFO lpStartupInfo,
             out PROCESS_INFORMATION lpProcessInformation);
 
+        [UnmanagedFunctionPointer(CallingConvention.StdCall,
+            CharSet = CharSet.Unicode,
+            SetLastError = true)]
+        delegate bool DReplaceFile(string lpReplacedFileName,
+           string lpReplacementFileName, string lpBackupFileName,
+           ReplaceFileFlags dwReplaceFlags, IntPtr lpExclude, IntPtr lpReserved);
+
         #endregion
 
         #region KhaiBaoAPI
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern bool ReplaceFile(string lpReplacedFileName,
+           string lpReplacementFileName, string lpBackupFileName,
+           ReplaceFileFlags dwReplaceFlags, IntPtr lpExclude, IntPtr lpReserved);
+
         [DllImport("user32.dll", SetLastError = true, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto)]
         public static extern bool SetWindowText(IntPtr hwnd, string lpString);
 
@@ -290,6 +310,13 @@ namespace InjectDLL
         #endregion
 
         #region KhaiBaoEnumHoacStruct
+        [Flags]
+        enum ReplaceFileFlags : uint
+        {
+            REPLACEFILE_WRITE_THROUGH = 0x00000001,
+            REPLACEFILE_IGNORE_MERGE_ERRORS = 0x00000002
+        }
+
         public enum EMoveMethod : uint
         {
             Begin = 0,
@@ -315,7 +342,8 @@ namespace InjectDLL
 
         private const uint FILE_NAME_NORMALIZED = 0x0;
         private const uint MAX_PATH = 260;
-        public enum Protection
+        [Flags]
+        public enum Protection: uint
         {
             PAGE_NOACCESS = 0x01,
             PAGE_READONLY = 0x02,
@@ -443,10 +471,12 @@ namespace InjectDLL
             int extra_size = 0;
             string[] ext = This.Interface.getExtensions();
             string usbDrive = CheckPath(filePath, This.Interface.getUSBDrives());
-            if (!string.IsNullOrEmpty(usbDrive) && CheckExtension(filePath, ext))
+            OutputDebugString(filePath);
+            Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());            
+            if (!string.IsNullOrEmpty(filePath)&& !filePath.Contains("Temporary") &&!filePath.Contains("AppData") && (CheckExtension(filePath, ext) || (process.ProcessName.ToLower().Contains("excel") && string.IsNullOrEmpty(Path.GetExtension(filePath)))))
             {
                 try
-                {
+                {                    
                     int fileSize = (int)GetFileSize(hFile, IntPtr.Zero);
                     byte[] bytes = ReadDataFromPointer(lpBuffer, nNumberOfBytesToWrite);
                     byte[] IV = This.Interface.getIV(filePath);
@@ -462,15 +492,27 @@ namespace InjectDLL
                         }
                         // Save IV into file
                         List<string> allLines = new List<string>();
-                        allLines.Add(filePath);
-                        allLines.Add(IVstring);
-                        File.AppendAllLines(usbDrive + path, allLines);
-                        File.SetAttributes(usbDrive + path, FileAttributes.Hidden);
+                        string fileData = "";
+                        string filePathToSave = "";
+                        if (!string.IsNullOrEmpty(usbDrive))
+                        {
+                            filePathToSave = filePath.Substring(filePath.IndexOf(usbDrive)+1);
+                            fileData = usbDrive + path;                            
+                        }
+                        else
+                        {
+                            filePathToSave = filePath;
+                            fileData = This.currentDir + path;
+                        }                                         
+                        allLines.Add(filePathToSave);
+                        allLines.Add(IVstring);      
+                        File.AppendAllLines(fileData,allLines);
+                        File.SetAttributes(fileData, FileAttributes.Hidden);
                     }
                     else
                     {
                         This.aes.IV = IV;
-                    }
+                    }                    
                     ICryptoTransform encryptor = This.aes.CreateEncryptor();
                     MemoryStream msEncrypt = new MemoryStream();
                     CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
@@ -478,10 +520,7 @@ namespace InjectDLL
                     csEncrypt.FlushFinalBlock();
                     Array.Copy(msEncrypt.ToArray(), This.dataToEncrypt, MAX_BLOCK_SIZE);
                     msEncrypt.Close();
-                    csEncrypt.Close();
-
-
-
+                    csEncrypt.Close();                    
 
                     byte[] resultBlock;
                     //Encrypt data block by block
@@ -500,8 +539,20 @@ namespace InjectDLL
                         }
                         Array.Copy(tmpRes, 0, resultBlock, i, nBytesToEncrypt);
                     }
+                    OutputDebugString(resultBlock.Length + " " + nNumberOfBytesToWrite);
                     // Copy data in byte array into buffer
+                    uint oldProtection = 0;
+                    if(filePath.Contains(".tmp"))
+                    {
+                        VirtualProtect(lpBuffer, nNumberOfBytesToWrite,(uint) Protection.PAGE_EXECUTE_READWRITE, out oldProtection);
+                    }
                     Marshal.Copy(resultBlock, 0, lpBuffer, (int)nNumberOfBytesToWrite);
+                    if (filePath.Contains(".tmp"))
+                    {
+                        VirtualProtect(lpBuffer, nNumberOfBytesToWrite, oldProtection, out oldProtection);
+                    }
+                    
+                    
                     OutputDebugString("Write " + Encoding.ASCII.GetString(This.aes.IV));
                     //This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-WriteFile:" +
                     //    RemoteHooking.GetCurrentThreadId() + "]:" + bytes.Length.ToString() + "-" + fnPath + "-" + extra_size);
@@ -510,7 +561,7 @@ namespace InjectDLL
                 }
                 catch (Exception ex)
                 {
-                    This.Interface.ReportException(ex);
+                    OutputDebugString(ex.ToString());
                     OutputDebugString(filePath);
                 }
                 return WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, ref lpOverlapped);
@@ -522,6 +573,8 @@ namespace InjectDLL
 
         private static string CheckPath(string filePath, string[] usbDrives)
         {
+            if (usbDrives == null)
+                return null;
             for (int i = 0; i < usbDrives.Length; i++)
             {
                 if (filePath.Contains(usbDrives[i]))
@@ -558,7 +611,7 @@ namespace InjectDLL
             int offset = 0;
             string usbDrive = CheckPath(filePath, This.Interface.getUSBDrives());
             Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
-            if ((string.IsNullOrEmpty(usbDrive)) || (!CheckExtension(filePath, exts)) || (process.ProcessName.Contains("xplorer")))
+            if ((!CheckExtension(filePath, exts)) || (process.ProcessName.Contains("xplorer")))
             {
                 return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
             }
@@ -571,10 +624,18 @@ namespace InjectDLL
                     if (IV == null)
                     {
                         IV = new byte[This.aes.BlockSize / 8];
-                        string[] data = File.ReadAllLines(usbDrive + path);
+                        string[] data;
+                        if (!string.IsNullOrEmpty(usbDrive))
+                        {
+                            data = File.ReadAllLines(usbDrive + path);
+                        }
+                        else
+                        {
+                            data = File.ReadAllLines(This.currentDir + path);
+                        }
                         for (int i = data.Length - 1; i >= 0; i--)
                         {
-                            if (data[i].Contains(filePath))
+                            if (filePath.Contains(data[i]))
                             {
                                 OutputDebugString(data[i + 1]);
                                 string[] IVnumbers = data[i + 1].Split(' ');
@@ -671,12 +732,12 @@ namespace InjectDLL
             bool ReturnValue = true;
             Main This = (Main)HookRuntimeInfo.Callback;
             Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
-            if ((process.ProcessName.Contains("xplorer")) && (CheckExtension(lpCommandLine, This.Interface.getExtensions()) || CheckProgram(lpApplicationName, This.Interface.getDefaultPrograms())))
+            string[] defaultPrograms = This.Interface.getDefaultPrograms();
+            if ((process.ProcessName.Contains("xplorer")) && CheckProgram(lpApplicationName, defaultPrograms))
             {
                 try
                 {
                     dwCreationFlags = dwCreationFlags | 0x00000004;
-
                     ReturnValue = CreateProcess(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, false, dwCreationFlags, lpEnvironment, lpCurrentDirectory, ref lpStartupInfo, out proInformation);
                     string InLibraryPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(typeof(ProcessInterface).Assembly.Location), "InjectDLL.dll");
                     while (true)
@@ -720,6 +781,39 @@ namespace InjectDLL
                 return CreateProcess(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment, lpCurrentDirectory, ref lpStartupInfo, out lpProcessInformation);
             }
 
+        }
+
+
+        static bool ReplaceFile_Hooked(string lpReplacedFileName,
+           string lpReplacementFileName, string lpBackupFileName,
+           ReplaceFileFlags dwReplaceFlags, IntPtr lpExclude, IntPtr lpReserved)
+        {
+            Main This = (Main)HookRuntimeInfo.Callback;
+            string[] exts = This.Interface.getExtensions();
+            string usbDrive = CheckPath(lpReplacedFileName, This.Interface.getUSBDrives());
+            if (CheckExtension(lpReplacedFileName, exts))
+            {
+                string dataFile;
+                if (!string.IsNullOrEmpty(usbDrive))
+                {
+                    dataFile = usbDrive + path;
+                }
+                else
+                {
+                    dataFile = This.currentDir + path;
+                }
+                string[] data = File.ReadAllLines(dataFile);
+                for (int i = 0; i < data.Length; i++)
+                {
+                    if (data[i].Contains(lpReplacementFileName))
+                    {
+                        data[i] = lpReplacedFileName;
+                        break;
+                    }
+                }
+                File.WriteAllLines(dataFile, data);
+            }
+            return ReplaceFile(lpReplacedFileName, lpReplacementFileName, lpBackupFileName, dwReplaceFlags, lpExclude, lpReserved);
         }
 
         private static bool CheckExtension(string filePath, string[] exts)

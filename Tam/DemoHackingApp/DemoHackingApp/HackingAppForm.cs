@@ -122,7 +122,7 @@ namespace DemoHackingApp
             ("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
             InitNotifyIcon();
             this.Icon = Resources.tho7mau_oYb_1;
-            
+            Global.defaultPrograms = Global.getDefaultPrograms();
             
             if(registryKey.GetValue("DemoHackingApp",null)==null)
             {

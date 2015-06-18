@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -34,7 +35,9 @@ namespace DemoHackingApp
         }
         public string[] getUSBDrives()
         {
-            return Global.USBDrives.ToArray();
+            if(Global.USBDrives.Count> 0)
+                return Global.USBDrives.ToArray();
+            return null;
         }
 
         public string[] getDefaultPrograms()
@@ -61,6 +64,10 @@ namespace DemoHackingApp
         public string[] getUSBLetter()
         {
             return Global.USBDrives.ToArray();
+        }
+        public string GetCurrentDirectory()
+        {
+            return Directory.GetCurrentDirectory();
         }
     }    
 }

@@ -8,7 +8,7 @@ namespace DemoHackingApp
 {
     public class Global
     {
-        public static List<string> extensions = new List<string> { ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pdf", ".rar", ".zip" };
+        public static List<string> extensions = new List<string> { ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pdf", ".rar", ".zip",".tmp" };
         public static List<int> hookProcessed = new List<int>();
         public static List<string> USBDrives = new List<string>();
         public static List<bool> USBExist = new List<bool>();
