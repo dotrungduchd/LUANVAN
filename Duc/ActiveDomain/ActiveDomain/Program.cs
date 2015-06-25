@@ -13,23 +13,32 @@ namespace ActiveDomain
     {
         static void Main(string[] args)
         {
+            byte[] iv = Signer.Sign(Encoding.ASCII.GetBytes("ivneemyeuoi"), "key", "salt");
+            string ivstring = Convert.ToBase64String(iv);
+            byte[] iv2 = Convert.FromBase64String(ivstring);
+            Console.WriteLine(Signer.Verity(iv2, Encoding.ASCII.GetBytes("ivneemyeuoi"), "key", "salt"));
+        }
+
+        public static void TestDomain()
+        {
             // Get current User login on Windows
             string userName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
             Console.WriteLine(userName);
             // print: DOMAIN/tamtq
 
-            // Get current Domain
-            //string domain = Environment.UserDomainName;
-            //Console.WriteLine(domain);
+            // Gets the network domain name associated with the current user
+            string userdomain = Environment.UserDomainName;
+            Console.WriteLine(userdomain);
             // print: DOMAIN
 
             // Get current full Domain 
+            // Gets an object that provides information about the local computer's network connectivity and traffic statistics.
             string domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
             Console.WriteLine(domain);
             Console.ReadKey();
             // print: domain.local
 
-            
+
 
             // Get all user in domain
             // Run in any windows client
@@ -51,7 +60,7 @@ namespace ActiveDomain
                     }
                 }
             }
-            catch(Exception)
+            catch (Exception)
             {
             }
             Console.ReadLine();
