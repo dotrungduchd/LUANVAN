@@ -472,11 +472,12 @@ namespace InjectDLL
             string[] ext = This.Interface.getExtensions();
             string usbDrive = CheckPath(filePath, This.Interface.getUSBDrives());
             OutputDebugString(filePath);
-            Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());            
-            if (!string.IsNullOrEmpty(filePath)&& !filePath.Contains("Temporary") &&!filePath.Contains("AppData") && (CheckExtension(filePath, ext) || (process.ProcessName.ToLower().Contains("excel") && string.IsNullOrEmpty(Path.GetExtension(filePath)))))
+            Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
+            if (!string.IsNullOrEmpty(filePath) && !filePath.Contains("Temporary") && !filePath.Contains("AppData") && CheckExtension(filePath, ext) && !filePath.Contains("~$"))
             {
                 try
-                {                    
+                {
+                    OutputDebugString("Phase 0");
                     int fileSize = (int)GetFileSize(hFile, IntPtr.Zero);
                     byte[] bytes = ReadDataFromPointer(lpBuffer, nNumberOfBytesToWrite);
                     byte[] IV = This.Interface.getIV(filePath);
@@ -496,23 +497,23 @@ namespace InjectDLL
                         string filePathToSave = "";
                         if (!string.IsNullOrEmpty(usbDrive))
                         {
-                            filePathToSave = filePath.Substring(filePath.IndexOf(usbDrive)+1);
-                            fileData = usbDrive + path;                            
+                            filePathToSave = filePath.Substring(filePath.IndexOf(usbDrive) + 1);
+                            fileData = usbDrive + path;
                         }
                         else
                         {
                             filePathToSave = filePath;
                             fileData = This.currentDir + path;
-                        }                                         
+                        }
                         allLines.Add(filePathToSave);
-                        allLines.Add(IVstring);      
-                        File.AppendAllLines(fileData,allLines);
+                        allLines.Add(IVstring);
+                        File.AppendAllLines(fileData, allLines);
                         File.SetAttributes(fileData, FileAttributes.Hidden);
                     }
                     else
                     {
                         This.aes.IV = IV;
-                    }                    
+                    }
                     ICryptoTransform encryptor = This.aes.CreateEncryptor();
                     MemoryStream msEncrypt = new MemoryStream();
                     CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
@@ -521,7 +522,6 @@ namespace InjectDLL
                     Array.Copy(msEncrypt.ToArray(), This.dataToEncrypt, MAX_BLOCK_SIZE);
                     msEncrypt.Close();
                     csEncrypt.Close();                    
-
                     byte[] resultBlock;
                     //Encrypt data block by block
                     resultBlock = new byte[nNumberOfBytesToWrite];
@@ -539,21 +539,10 @@ namespace InjectDLL
                         }
                         Array.Copy(tmpRes, 0, resultBlock, i, nBytesToEncrypt);
                     }
-                    OutputDebugString(resultBlock.Length + " " + nNumberOfBytesToWrite);
+                    //OutputDebugString(resultBlock.Length + " " + nNumberOfBytesToWrite);
                     // Copy data in byte array into buffer
                     uint oldProtection = 0;
-                    if(filePath.Contains(".tmp"))
-                    {
-                        VirtualProtect(lpBuffer, nNumberOfBytesToWrite,(uint) Protection.PAGE_EXECUTE_READWRITE, out oldProtection);
-                    }
                     Marshal.Copy(resultBlock, 0, lpBuffer, (int)nNumberOfBytesToWrite);
-                    if (filePath.Contains(".tmp"))
-                    {
-                        VirtualProtect(lpBuffer, nNumberOfBytesToWrite, oldProtection, out oldProtection);
-                    }
-                    
-                    
-                    OutputDebugString("Write " + Encoding.ASCII.GetString(This.aes.IV));
                     //This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-WriteFile:" +
                     //    RemoteHooking.GetCurrentThreadId() + "]:" + bytes.Length.ToString() + "-" + fnPath + "-" + extra_size);
 
@@ -568,7 +557,9 @@ namespace InjectDLL
             }
             // call original API...
             else
+            {
                 return WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, ref lpOverlapped);
+            }
         }
 
         private static string CheckPath(string filePath, string[] usbDrives)
@@ -791,27 +782,76 @@ namespace InjectDLL
             Main This = (Main)HookRuntimeInfo.Callback;
             string[] exts = This.Interface.getExtensions();
             string usbDrive = CheckPath(lpReplacedFileName, This.Interface.getUSBDrives());
-            if (CheckExtension(lpReplacedFileName, exts))
+            try
             {
-                string dataFile;
-                if (!string.IsNullOrEmpty(usbDrive))
+                if (CheckExtension(lpReplacedFileName, exts) && !lpReplacementFileName.Contains("~$"))
                 {
-                    dataFile = usbDrive + path;
-                }
-                else
-                {
-                    dataFile = This.currentDir + path;
-                }
-                string[] data = File.ReadAllLines(dataFile);
-                for (int i = 0; i < data.Length; i++)
-                {
-                    if (data[i].Contains(lpReplacementFileName))
+                    string dataFile;
+                    byte[] IV = This.Interface.getIV(lpReplacedFileName);
+                    if (IV == null)
                     {
-                        data[i] = lpReplacedFileName;
-                        break;
+                        if (!string.IsNullOrEmpty(usbDrive))
+                        {
+                            dataFile = usbDrive + path;
+                        }
+                        else
+                        {
+                            dataFile = This.currentDir + path;
+                        }
+                        string[] data = File.ReadAllLines(dataFile);
+                        bool hasIV = false;
+                        for (int i = data.Length - 1; i >= 0; i--)
+                        {
+                            if (lpReplacedFileName.Contains(data[i]))
+                            {
+                                string[] IVnumbers = data[i + 1].Split(' ');
+                                for (int j = 0; j < IV.Length; j++)
+                                {
+                                    IV[j] = (byte)int.Parse(IVnumbers[j]);
+                                }
+                                hasIV = true;
+                                break;
+                            }
+                        }
+                        if (!hasIV)
+                        {
+                            This.aes.GenerateIV();
+                            This.Interface.addIV(lpReplacedFileName, This.aes.IV);
+                            string IVstring = "";
+                            for (int i = 0; i < This.aes.IV.Length; i++)
+                            {
+                                IVstring += (This.aes.IV[i].ToString() + " ");
+                            }
+                            List<string> tmpData = new List<string>();
+                            // Save IV into file                      
+                            tmpData.Add(lpReplacedFileName);
+                            tmpData.Add(IVstring);
+                            File.AppendAllLines(dataFile, tmpData);
+                            File.SetAttributes(dataFile, FileAttributes.Hidden);
+                        }
+                        ICryptoTransform encryptor = This.aes.CreateEncryptor();
+                        MemoryStream msEncrypt = new MemoryStream();
+                        CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
+                        csEncrypt.Write(This.dataIgnition, 0, MAX_BLOCK_SIZE);
+                        csEncrypt.FlushFinalBlock();
+                        Array.Copy(msEncrypt.ToArray(), This.dataToEncrypt, MAX_BLOCK_SIZE);
+                        msEncrypt.Close();
+                        csEncrypt.Close();
+                        byte[] dataToReplace = File.ReadAllBytes(lpReplacementFileName);
+                        OutputDebugString("Replace Read-" + lpReplacedFileName);
+                        for (int i = 0; i < dataToReplace.Length; i++)
+                        {
+                            dataToReplace[i] = (byte)(dataToReplace[i] ^ This.dataToEncrypt[i % MAX_BLOCK_SIZE]);
+                        }
+                        File.WriteAllBytes(lpReplacementFileName, dataToReplace);
+                        OutputDebugString("Replace Write-" + lpReplacementFileName);
                     }
+
                 }
-                File.WriteAllLines(dataFile, data);
+            }
+            catch (Exception ex)
+            {
+                OutputDebugString(ex.ToString());
             }
             return ReplaceFile(lpReplacedFileName, lpReplacementFileName, lpBackupFileName, dwReplaceFlags, lpExclude, lpReserved);
         }
