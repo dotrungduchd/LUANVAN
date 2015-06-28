@@ -29,10 +29,20 @@ namespace DemoHackingApp
         public void Ping()
         {
         }
+
+        /// <summary>
+        /// Get file extensions is supported
+        /// </summary>
+        /// <returns></returns>
         public string[] getExtensions()
         {
             return Global.extensions.ToArray();
         }
+
+        /// <summary>
+        /// Get All USB Drive plug-in computer
+        /// </summary>
+        /// <returns></returns>
         public string[] getUSBDrives()
         {
             if(Global.USBDrives.Count> 0)
@@ -40,11 +50,20 @@ namespace DemoHackingApp
             return null;
         }
 
+        /// <summary>
+        /// Get Default Programs Open Specifies File Extension
+        /// </summary>
+        /// <returns></returns>
         public string[] getDefaultPrograms()
         {
             return Global.defaultPrograms.ToArray();
         }
 
+        /// <summary>
+        /// Get IV From App Memory
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
         public byte[] getIV(string filePath)
         {
             if (Global.FileInformations.Keys.Contains(filePath))
@@ -54,6 +73,11 @@ namespace DemoHackingApp
             return null;
         }
 
+        /// <summary>
+        /// Add New IV to App Memory
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="IV"></param>
         public void addIV(string filePath, byte[] IV)
         {
             if (!Global.FileInformations.Keys.Contains(filePath))
@@ -61,10 +85,11 @@ namespace DemoHackingApp
             else
                 Global.FileInformations[filePath] = IV;
         }
-        public string[] getUSBLetter()
-        {
-            return Global.USBDrives.ToArray();
-        }
+
+        /// <summary>
+        /// Get App Directory
+        /// </summary>
+        /// <returns></returns>
         public string GetCurrentDirectory()
         {
             return Directory.GetCurrentDirectory();

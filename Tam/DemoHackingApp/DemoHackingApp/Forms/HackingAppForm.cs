@@ -23,6 +23,8 @@ namespace DemoHackingApp
         {
             InitializeComponent();
         }
+
+        #region Import dll
         [StructLayout(LayoutKind.Sequential)]
         public struct MARGINS
         {
@@ -39,6 +41,9 @@ namespace DemoHackingApp
         [DllImport("dwmapi.dll", PreserveSig = false)]
         public static extern bool DwmIsCompositionEnabled();
 
+        #endregion
+
+        #region Notification and Event Form
         static String ChannelName = null;
         NotifyIcon notifyIcon;
         public void InitNotifyIcon()
@@ -116,6 +121,24 @@ namespace DemoHackingApp
 			// Quit without further ado.
 			Application.Exit();
 		}
+
+        void notifyIcon_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                this.Show();
+                this.WindowState = FormWindowState.Normal;
+                notifyIcon.Visible = false;
+            }
+        }   
+
+        #endregion
+
+        /// <summary>
+        /// Start Hook when application load, get USB Drive
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void HackingAppForm_Load(object sender, EventArgs e)
         {
             RegistryKey registryKey = Registry.CurrentUser.OpenSubKey
@@ -166,16 +189,7 @@ namespace DemoHackingApp
             this.WindowState = FormWindowState.Minimized;
         }
 
-        void notifyIcon_MouseClick(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-            {
-                this.Show();
-                this.WindowState = FormWindowState.Normal;
-                notifyIcon.Visible = false;
-            }
-        }   
-        
+        #region Device Event
         private void DeviceInsertedEvent(object sender, EventArrivedEventArgs e)
         {
             while (true)
@@ -203,7 +217,7 @@ namespace DemoHackingApp
             }
         }
 
-        void DeviceRemovedEvent(object sender, EventArrivedEventArgs e)
+        private void DeviceRemovedEvent(object sender, EventArrivedEventArgs e)
         {
             lock (Global.USBExist)
             {               
@@ -234,6 +248,8 @@ namespace DemoHackingApp
             }
         }
 
+        #endregion
+
         private void HackingAppForm_Resize(object sender, EventArgs e)
         {
             if (FormWindowState.Minimized == this.WindowState)
@@ -247,5 +263,22 @@ namespace DemoHackingApp
                 notifyIcon.Visible = false;
             }
         }
+
+        private void btExtensions_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btAuthenticate_Click(object sender, EventArgs e)
+        {
+            Global.authForm.Show();
+
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+
+        }
+
     }
 }

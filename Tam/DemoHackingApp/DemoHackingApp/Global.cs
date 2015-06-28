@@ -14,8 +14,27 @@ namespace DemoHackingApp
         public static List<bool> USBExist = new List<bool>();
         public static List<string> defaultPrograms = new List<string>();
         public static Dictionary<string, byte[]> FileInformations = new Dictionary<string, byte[]>();
-        
-        
+
+        #region Authentication
+        public static string ID = "dotrungduc";
+        public static string PASSWORD = "tinhvenoidau";
+        public static string DOMAIN_NAME = "";
+        public static string USER = "";
+
+        public static string KEY01 = "";
+        public static string KEY02 = "";
+
+        public static string metadataFileName = "";
+
+        public static AuthenticationForm authForm = new AuthenticationForm();
+        public static ExtensionsForm extsForm = new ExtensionsForm();
+        public static void GetListExtensions()
+        {
+            extensions = Config.GetListExtensions();
+        }
+
+        #endregion
+
         public static List<string> getDefaultPrograms()
         {
             List<string> defaultPrograms = new List<string>();

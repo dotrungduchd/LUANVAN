@@ -458,21 +458,22 @@ namespace InjectDLL
                 InTemplateFile);
         }
 
-        static bool WriteFile_Hooked(IntPtr hFile, IntPtr lpBuffer,
-                uint nNumberOfBytesToWrite, IntPtr lpNumberOfBytesWritten,
-                [In] ref System.Threading.NativeOverlapped lpOverlapped)
+        static bool WriteFile_Hooked(
+            IntPtr hFile, IntPtr lpBuffer,
+            uint nNumberOfBytesToWrite, 
+            IntPtr lpNumberOfBytesWritten,
+            [In] ref System.Threading.NativeOverlapped lpOverlapped)
         {
 
+            Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
+            Main This = (Main)HookRuntimeInfo.Callback;
             StringBuilder fnPath = new StringBuilder((int)MAX_PATH);
             GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);
             string filePath = fnPath.ToString();
-            Main This = (Main)HookRuntimeInfo.Callback;
-            bool result = false;
-            int extra_size = 0;
             string[] ext = This.Interface.getExtensions();
             string usbDrive = CheckPath(filePath, This.Interface.getUSBDrives());
             OutputDebugString(filePath);
-            Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
+            
             if (!string.IsNullOrEmpty(filePath) && !filePath.Contains("Temporary") && !filePath.Contains("AppData") && CheckExtension(filePath, ext) && !filePath.Contains("~$"))
             {
                 try
@@ -480,6 +481,9 @@ namespace InjectDLL
                     OutputDebugString("Phase 0");
                     int fileSize = (int)GetFileSize(hFile, IntPtr.Zero);
                     byte[] bytes = ReadDataFromPointer(lpBuffer, nNumberOfBytesToWrite);
+
+                    #region Get IV
+                    // Get IV from App memory. If IV equals null, auto Generate IV
                     byte[] IV = This.Interface.getIV(filePath);
                     if (IV == null)
                     {
@@ -491,20 +495,23 @@ namespace InjectDLL
                         {
                             IVstring += (This.aes.IV[i].ToString() + " ");
                         }
-                        // Save IV into file
+                        // Prepare Save IV into file
                         List<string> allLines = new List<string>();
                         string fileData = "";
                         string filePathToSave = "";
                         if (!string.IsNullOrEmpty(usbDrive))
                         {
+                            // Save metadata to USB
                             filePathToSave = filePath.Substring(filePath.IndexOf(usbDrive) + 1);
                             fileData = usbDrive + path;
                         }
                         else
                         {
+                            // Save metadata to App Directory
                             filePathToSave = filePath;
                             fileData = This.currentDir + path;
                         }
+                        // Save to file
                         allLines.Add(filePathToSave);
                         allLines.Add(IVstring);
                         File.AppendAllLines(fileData, allLines);
@@ -514,6 +521,9 @@ namespace InjectDLL
                     {
                         This.aes.IV = IV;
                     }
+                    #endregion
+
+                    #region Encrypt data
                     ICryptoTransform encryptor = This.aes.CreateEncryptor();
                     MemoryStream msEncrypt = new MemoryStream();
                     CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
@@ -523,6 +533,7 @@ namespace InjectDLL
                     msEncrypt.Close();
                     csEncrypt.Close();                    
                     byte[] resultBlock;
+
                     //Encrypt data block by block
                     resultBlock = new byte[nNumberOfBytesToWrite];
                     for (int i = 0; i < nNumberOfBytesToWrite; i = i + MAX_BLOCK_SIZE)
@@ -539,14 +550,10 @@ namespace InjectDLL
                         }
                         Array.Copy(tmpRes, 0, resultBlock, i, nBytesToEncrypt);
                     }
-                    //OutputDebugString(resultBlock.Length + " " + nNumberOfBytesToWrite);
-                    // Copy data in byte array into buffer
-                    uint oldProtection = 0;
+
                     Marshal.Copy(resultBlock, 0, lpBuffer, (int)nNumberOfBytesToWrite);
-                    //This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-WriteFile:" +
-                    //    RemoteHooking.GetCurrentThreadId() + "]:" + bytes.Length.ToString() + "-" + fnPath + "-" + extra_size);
 
-
+                    #endregion
                 }
                 catch (Exception ex)
                 {
@@ -561,47 +568,24 @@ namespace InjectDLL
                 return WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, ref lpOverlapped);
             }
         }
-
-        private static string CheckPath(string filePath, string[] usbDrives)
-        {
-            if (usbDrives == null)
-                return null;
-            for (int i = 0; i < usbDrives.Length; i++)
-            {
-                if (filePath.Contains(usbDrives[i]))
-                    return usbDrives[i];
-            }
-            return null;
-        }
-
-
-        // Read data from pointer
-        private static byte[] ReadDataFromPointer(IntPtr lpBuffer, uint nNumberOfBytesToWrite)
-        {
-            byte[] bytes = new byte[nNumberOfBytesToWrite];
-            for (uint i = 0; i < nNumberOfBytesToWrite; i++)
-            {
-                bytes[i] = Marshal.ReadByte(lpBuffer, (int)i);
-            }
-            return bytes;
-        }
-
-
+        
         private DReadFile ReadFileFunc;
-        static bool ReadFile_Hooked(IntPtr hFile, IntPtr lpBuffer,
-           uint nNumberOfBytesToRead, IntPtr lpNumberOfBytesRead, [In] ref System.Threading.NativeOverlapped lpOverlapped)
+        static bool ReadFile_Hooked(
+           IntPtr hFile, 
+           IntPtr lpBuffer,
+           uint nNumberOfBytesToRead,
+           IntPtr lpNumberOfBytesRead, 
+           [In] ref System.Threading.NativeOverlapped lpOverlapped)
         {
-
+            Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
+            Main This = (Main)HookRuntimeInfo.Callback;
             StringBuilder fnPath = new StringBuilder((int)MAX_PATH);
             GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);
             bool ReturnValue = false;
             string filePath = fnPath.ToString();
-            Main This = (Main)HookRuntimeInfo.Callback;
             string[] exts = This.Interface.getExtensions();
-            //int fileSize = (int)GetFileSize(hFile, IntPtr.Zero);            
-            int offset = 0;
             string usbDrive = CheckPath(filePath, This.Interface.getUSBDrives());
-            Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
+
             if ((!CheckExtension(filePath, exts)) || (process.ProcessName.Contains("xplorer")))
             {
                 return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
@@ -610,7 +594,8 @@ namespace InjectDLL
             {
                 try
                 {
-                    // Get IV from file and generate block data to decrypt
+                    #region Get IV
+                    // Get IV from App Memory. If IV equals null, read from file and generate block data to decrypt
                     byte[] IV = This.Interface.getIV(filePath);
                     if (IV == null)
                     {
@@ -618,10 +603,12 @@ namespace InjectDLL
                         string[] data;
                         if (!string.IsNullOrEmpty(usbDrive))
                         {
+                            // Read metadata from USB
                             data = File.ReadAllLines(usbDrive + path);
                         }
                         else
                         {
+                            // Read metadata from App Directory
                             data = File.ReadAllLines(This.currentDir + path);
                         }
                         for (int i = data.Length - 1; i >= 0; i--)
@@ -639,7 +626,11 @@ namespace InjectDLL
                         }
                         This.Interface.addIV(filePath, IV);
                     }
+
                     This.aes.IV = IV;
+                    #endregion
+
+                    #region Decrypt data
                     ICryptoTransform encryptor = This.aes.CreateEncryptor();
                     MemoryStream msEncrypt = new MemoryStream();
                     CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
@@ -651,7 +642,6 @@ namespace InjectDLL
 
                     // Get the current offset
                     int startPos = 0;
-                    int oldOffset = -1;
                     int lpDistanceMoveHigh = 0;
                     int currentOffset = 0;
                     currentOffset = (int)SetFilePointer(hFile, 0, out lpDistanceMoveHigh, EMoveMethod.Current);
@@ -660,12 +650,14 @@ namespace InjectDLL
                         // if lpOverlapped is a null it will throw an exception
                         startPos = lpOverlapped.OffsetLow;
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         startPos = currentOffset;
                     }
+
                     // Call original API to get buffer
                     ReturnValue = This.ReadFileFunc(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
+
                     // Get number of bytes read
                     int bytesCount = (int)nNumberOfBytesToRead;
                     if (!lpNumberOfBytesRead.Equals(IntPtr.Zero) && Marshal.ReadInt32(lpNumberOfBytesRead) != 0)
@@ -677,11 +669,11 @@ namespace InjectDLL
                     {
                         bytesCount = lpOverlapped.InternalHigh.ToInt32();
                     }
+
                     // Read data from buffer 
                     byte[] bytes = ReadDataFromPointer(lpBuffer, (uint)bytesCount);
 
                     // Decrypt data and copy it to buffer (replace the encrypted data)
-                    // ---- Cach 2 ----
                     byte[] resultBlock = new byte[bytesCount];
                     OutputDebugString("Start Pos: " + startPos);
                     startPos = startPos % MAX_BLOCK_SIZE;
@@ -690,14 +682,8 @@ namespace InjectDLL
                         resultBlock[i] = (byte)(bytes[i] ^ This.dataToEncrypt[(i + startPos) % MAX_BLOCK_SIZE]);
                     }
                     Marshal.Copy(resultBlock, 0, lpBuffer, bytesCount);
-                    // ---- Cach 2 ----
 
-                    //lock (This.Queue)
-                    //{
-                    //    DateTime now = DateTime.Now;
-                    //    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-ReadFile:" +
-                    //        RemoteHooking.GetCurrentThreadId() + ":" + bytesCount + "]:" + "-" + fnPath + "-" + currentOffset + "\n");
-                    //}
+                    #endregion
 
                 }
                 catch (Exception ex)
@@ -708,7 +694,8 @@ namespace InjectDLL
             }
         }
 
-        static bool CreateProcess_Hooked(string lpApplicationName,
+        static bool CreateProcess_Hooked(
+           string lpApplicationName,
            string lpCommandLine,
            IntPtr lpProcessAttributes,
            IntPtr lpThreadAttributes,
@@ -719,22 +706,27 @@ namespace InjectDLL
            [In] ref STARTUPINFO lpStartupInfo,
            out PROCESS_INFORMATION lpProcessInformation)
         {
-            PROCESS_INFORMATION proInformation = new PROCESS_INFORMATION();
-            bool ReturnValue = true;
-            Main This = (Main)HookRuntimeInfo.Callback;
             Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
+            PROCESS_INFORMATION proInformation = new PROCESS_INFORMATION();
+            Main This = (Main)HookRuntimeInfo.Callback;
+            bool ReturnValue = true;
             string[] defaultPrograms = This.Interface.getDefaultPrograms();
+
             if ((process.ProcessName.Contains("xplorer")) && CheckProgram(lpApplicationName, defaultPrograms))
             {
                 try
                 {
+                    // Set program to suppend mode and get InjectDLL path
                     dwCreationFlags = dwCreationFlags | 0x00000004;
-                    ReturnValue = CreateProcess(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, false, dwCreationFlags, lpEnvironment, lpCurrentDirectory, ref lpStartupInfo, out proInformation);
-                    string InLibraryPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(typeof(ProcessInterface).Assembly.Location), "InjectDLL.dll");
+                    ReturnValue = CreateProcess(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes,
+                        false, dwCreationFlags, lpEnvironment, lpCurrentDirectory, ref lpStartupInfo, out proInformation);
+                    string InLibraryPath = 
+                        System.IO.Path.Combine(System.IO.Path.GetDirectoryName(typeof(ProcessInterface).Assembly.Location), "InjectDLL.dll");
                     while (true)
                     {
                         try
                         {
+                            // Inject DLL
                             RemoteHooking.Inject(proInformation.dwProcessId, InLibraryPath, InLibraryPath, This.myChannelName);
                             break;
                         }
@@ -744,13 +736,6 @@ namespace InjectDLL
                         }
                     }
 
-                    //lock (This.Queue)
-                    //{
-                    //    DateTime now = DateTime.Now;
-                    //    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-CreateProcess:" +
-                    //        RemoteHooking.GetCurrentThreadId() + "]:" + "-" + lpCommandLine + "-" + proInformation.dwProcessId + "\n");
-
-                    //}
                     OutputDebugString("Create Process: " + lpCommandLine + "-" + proInformation.dwProcessId);
                 }
                 catch (Exception ex)
@@ -758,12 +743,12 @@ namespace InjectDLL
                     OutputDebugString(ex.Message);
                     This.Interface.ReportException(ex);
                 }
+
                 lpProcessInformation = new PROCESS_INFORMATION();
                 lpProcessInformation.dwProcessId = proInformation.dwProcessId;
                 lpProcessInformation.dwThreadId = proInformation.dwThreadId;
                 lpProcessInformation.hProcess = proInformation.hProcess;
                 lpProcessInformation.hThread = proInformation.hThread;
-
 
                 return ReturnValue;
             }
@@ -775,21 +760,28 @@ namespace InjectDLL
         }
 
 
-        static bool ReplaceFile_Hooked(string lpReplacedFileName,
-           string lpReplacementFileName, string lpBackupFileName,
-           ReplaceFileFlags dwReplaceFlags, IntPtr lpExclude, IntPtr lpReserved)
+        static bool ReplaceFile_Hooked(
+           string lpReplacedFileName,
+           string lpReplacementFileName, 
+           string lpBackupFileName,
+           ReplaceFileFlags dwReplaceFlags, 
+           IntPtr lpExclude, IntPtr lpReserved)
         {
             Main This = (Main)HookRuntimeInfo.Callback;
             string[] exts = This.Interface.getExtensions();
             string usbDrive = CheckPath(lpReplacedFileName, This.Interface.getUSBDrives());
+
             try
             {
                 if (CheckExtension(lpReplacedFileName, exts) && !lpReplacementFileName.Contains("~$"))
                 {
                     string dataFile;
+
+                    // Get IV from App Memory. If IV equals null, read from file
                     byte[] IV = This.Interface.getIV(lpReplacedFileName);
                     if (IV == null)
                     {
+                        #region Get IV
                         if (!string.IsNullOrEmpty(usbDrive))
                         {
                             dataFile = usbDrive + path;
@@ -813,6 +805,8 @@ namespace InjectDLL
                                 break;
                             }
                         }
+
+                        // If IV is not exist, generate IV
                         if (!hasIV)
                         {
                             This.aes.GenerateIV();
@@ -829,6 +823,9 @@ namespace InjectDLL
                             File.AppendAllLines(dataFile, tmpData);
                             File.SetAttributes(dataFile, FileAttributes.Hidden);
                         }
+                        #endregion
+
+                        #region Encrypt data
                         ICryptoTransform encryptor = This.aes.CreateEncryptor();
                         MemoryStream msEncrypt = new MemoryStream();
                         CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
@@ -837,7 +834,10 @@ namespace InjectDLL
                         Array.Copy(msEncrypt.ToArray(), This.dataToEncrypt, MAX_BLOCK_SIZE);
                         msEncrypt.Close();
                         csEncrypt.Close();
+
+                        // Read all data and encrypt
                         byte[] dataToReplace = File.ReadAllBytes(lpReplacementFileName);
+
                         OutputDebugString("Replace Read-" + lpReplacedFileName);
                         for (int i = 0; i < dataToReplace.Length; i++)
                         {
@@ -845,6 +845,8 @@ namespace InjectDLL
                         }
                         File.WriteAllBytes(lpReplacementFileName, dataToReplace);
                         OutputDebugString("Replace Write-" + lpReplacementFileName);
+
+                        #endregion
                     }
 
                 }
@@ -856,6 +858,47 @@ namespace InjectDLL
             return ReplaceFile(lpReplacedFileName, lpReplacementFileName, lpBackupFileName, dwReplaceFlags, lpExclude, lpReserved);
         }
 
+        #region SubFunction
+        /// <summary>
+        /// Check file is in USB
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="usbDrives"></param>
+        /// <returns></returns>
+        private static string CheckPath(string filePath, string[] usbDrives)
+        {
+            if (usbDrives == null)
+                return null;
+            for (int i = 0; i < usbDrives.Length; i++)
+            {
+                if (filePath.Contains(usbDrives[i]))
+                    return usbDrives[i];
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Return data from pointer
+        /// </summary>
+        /// <param name="lpBuffer"></param>
+        /// <param name="nNumberOfBytesToWrite"></param>
+        /// <returns></returns>
+        private static byte[] ReadDataFromPointer(IntPtr lpBuffer, uint nNumberOfBytesToWrite)
+        {
+            byte[] bytes = new byte[nNumberOfBytesToWrite];
+            for (uint i = 0; i < nNumberOfBytesToWrite; i++)
+            {
+                bytes[i] = Marshal.ReadByte(lpBuffer, (int)i);
+            }
+            return bytes;
+        }
+
+        /// <summary>
+        /// Check file path contain extension supported
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="exts"></param>
+        /// <returns></returns>
         private static bool CheckExtension(string filePath, string[] exts)
         {
             foreach (var ext in exts)
@@ -866,6 +909,12 @@ namespace InjectDLL
             return false;
         }
 
+        /// <summary>
+        /// Check application is a default program
+        /// </summary>
+        /// <param name="lpApplicationName"></param>
+        /// <param name="defaultPrograms"></param>
+        /// <returns></returns>
         private static bool CheckProgram(string lpApplicationName, string[] defaultPrograms)
         {
             for (int i = 0; i < defaultPrograms.Length; i++)
@@ -875,6 +924,7 @@ namespace InjectDLL
             }
             return false;
         }
+        #endregion
 
         #endregion
     }
