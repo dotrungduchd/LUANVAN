@@ -16,15 +16,19 @@ namespace DemoHackingApp
         public static Dictionary<string, byte[]> FileInformations = new Dictionary<string, byte[]>();
 
         #region Authentication
-        public static string ID = "dotrungduc";
-        public static string PASSWORD = "tinhvenoidau";
+        public static string ID = "";
+        public static string PASSWORD = "";
         public static string DOMAIN_NAME = "";
         public static string USER = "";
+
+        public static int AUTH_TYPE = (int)AuthType.Personal;
+        public static bool REMEMBER_ME = false;
+        public static int DOMAIN_PERMIT = (int)DomainPermission.OnlyMe;
 
         public static string KEY01 = "";
         public static string KEY02 = "";
 
-        public static string metadataFileName = "";
+        public static string METADATA_FILENAME = "";
 
         public static AuthenticationForm authForm = new AuthenticationForm();
         public static ExtensionsForm extsForm = new ExtensionsForm();
@@ -33,6 +37,24 @@ namespace DemoHackingApp
             extensions = Config.GetListExtensions();
         }
 
+        public static void Initialization()
+        {
+            GetListExtensions();
+            getDefaultPrograms();
+
+            try
+            {
+                AUTH_TYPE = int.Parse(Config.GetAppSetting(Config.AUTH_TYPE));
+                DOMAIN_PERMIT = int.Parse(Config.GetAppSetting(Config.DOMAIN_PERMIT));
+                REMEMBER_ME = bool.Parse(Config.GetAppSetting(Config.REMEMBER_ME));
+                ID = Config.GetAppSetting(Config.ID);
+                PASSWORD = Config.GetAppSetting(Config.PASSWORD);
+            }
+            catch
+            {
+            }
+
+        }
         #endregion
 
         public static List<string> getDefaultPrograms()
@@ -64,6 +86,7 @@ namespace DemoHackingApp
             return defaultPrograms;
             
         }
+
 
     }
 }

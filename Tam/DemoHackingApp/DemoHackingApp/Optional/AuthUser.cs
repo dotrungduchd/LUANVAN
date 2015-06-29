@@ -33,10 +33,10 @@ namespace DemoHackingApp
         Domain = 1
     }
 
-    public enum FilePermit : int
+    public enum DomainPermission : int
     {
         OnlyMe = 0,
         AllUserInDomain = 1,
-        OnlySomeUserInDomain = 2
+        SomeUserInDomain = 2
     }
 }
