@@ -605,11 +605,7 @@ namespace InjectDLL
                         if (!string.IsNullOrEmpty(usbDrive))
                         {
                             // Read metadata from USB
-                            data = File.ReadAllLines(usbDrive + path);
-                            if (!data.Contains(Environment.UserDomainName))
-                            {
-                                return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
-                            }
+                            data = File.ReadAllLines(usbDrive + path);                            
                         }
                         else
                         {
@@ -620,7 +616,8 @@ namespace InjectDLL
                         {
                             if (filePath.Contains(data[i]))
                             {
-                                OutputDebugString(data[i + 1]);
+                                if (!string.IsNullOrEmpty(usbDrive) && !data[i-1].Contains(Environment.UserDomainName))
+                                    return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);                                
                                 string[] IVnumbers = data[i + 1].Split(' ');
                                 for (int j = 0; j < IV.Length; j++)
                                 {
