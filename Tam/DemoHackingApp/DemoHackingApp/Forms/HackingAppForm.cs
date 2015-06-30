@@ -187,6 +187,7 @@ namespace DemoHackingApp
                 RemoteHooking.CreateAndInject("explorer.exe", "", 0, LibraryPath, LibraryPath, out processId, ChannelName);
             }
             this.WindowState = FormWindowState.Minimized;
+            Global.currentDomain = Environment.UserDomainName;
         }
 
         #region Device Event

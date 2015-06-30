@@ -19,6 +19,7 @@ namespace InjectDLL
         public const string path = @"data.tam";
         public string currentDir = "";
         public const int FINAL_BLOCK = -1;
+        public string currentDomain = "";
         byte[] dataIgnition, dataToEncrypt;
         ProcessInterface Interface;
         LocalHook WriteFileHook, ReadFileHook, CreateProcessHook,ReplaceFileHook;
@@ -47,7 +48,8 @@ namespace InjectDLL
             aes.Key = key.GetBytes(aes.KeySize / 8);
             aes.Padding = PaddingMode.Zeros;
             aes.Mode = CipherMode.CFB;
-            currentDir = Interface.GetCurrentDirectory() + "\\";            
+            currentDir = Interface.GetCurrentDirectory() + "\\";
+            currentDomain = Environment.UserDomainName;
             Interface.Ping();
         }
 
@@ -472,8 +474,6 @@ namespace InjectDLL
             string filePath = fnPath.ToString();
             string[] ext = This.Interface.getExtensions();
             string usbDrive = CheckPath(filePath, This.Interface.getUSBDrives());
-            OutputDebugString(filePath);
-            
             if (!string.IsNullOrEmpty(filePath) && !filePath.Contains("Temporary") && !filePath.Contains("AppData") && CheckExtension(filePath, ext) && !filePath.Contains("~$"))
             {
                 try
@@ -504,6 +504,7 @@ namespace InjectDLL
                             // Save metadata to USB
                             filePathToSave = filePath.Substring(filePath.IndexOf(usbDrive) + 1);
                             fileData = usbDrive + path;
+                            allLines.Add(This.currentDomain);
                         }
                         else
                         {
@@ -513,7 +514,7 @@ namespace InjectDLL
                         }
                         // Save to file
                         allLines.Add(filePathToSave);
-                        allLines.Add(IVstring);
+                        allLines.Add(IVstring);                        
                         File.AppendAllLines(fileData, allLines);
                         File.SetAttributes(fileData, FileAttributes.Hidden);
                     }
@@ -586,7 +587,7 @@ namespace InjectDLL
             string[] exts = This.Interface.getExtensions();
             string usbDrive = CheckPath(filePath, This.Interface.getUSBDrives());
 
-            if ((!CheckExtension(filePath, exts)) || (process.ProcessName.Contains("xplorer")))
+            if (!CheckExtension(filePath, exts))
             {
                 return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
             }
@@ -605,6 +606,10 @@ namespace InjectDLL
                         {
                             // Read metadata from USB
                             data = File.ReadAllLines(usbDrive + path);
+                            if (!data.Contains(Environment.UserDomainName))
+                            {
+                                return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
+                            }
                         }
                         else
                         {

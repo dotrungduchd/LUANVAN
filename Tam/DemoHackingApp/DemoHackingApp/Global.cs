@@ -14,6 +14,7 @@ namespace DemoHackingApp
         public static List<bool> USBExist = new List<bool>();
         public static List<string> defaultPrograms = new List<string>();
         public static Dictionary<string, byte[]> FileInformations = new Dictionary<string, byte[]>();
+        public static string currentDomain;
 
         #region Authentication
         public static string ID = "";
