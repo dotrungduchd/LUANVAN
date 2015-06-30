@@ -72,6 +72,7 @@
     <Compile Include="Forms\ExtensionsForm.Designer.cs">
       <DependentUpon>ExtensionsForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Optional\Users.cs" />
     <Compile Include="Optional\FileExtensions.cs" />
     <Compile Include="Optional\FileHelper.cs" />
     <Compile Include="Forms\HackingAppForm.cs">

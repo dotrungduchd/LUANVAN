@@ -17,7 +17,7 @@ namespace DemoHackingApp
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             //Application.Run(new HackingAppForm());
-            //Application.Run(new AuthenticationForm());
+            Application.Run(new AuthenticationForm());
             //Application.Run(new ExtensionsForm());
 
         }
