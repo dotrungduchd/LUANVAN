@@ -272,7 +272,7 @@ namespace DemoHackingApp
 
         private void btAuthenticate_Click(object sender, EventArgs e)
         {
-            Global.authForm.Show();
+            //Global.authForm.Show();
 
         }
 

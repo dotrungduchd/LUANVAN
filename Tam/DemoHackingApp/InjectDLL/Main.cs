@@ -16,7 +16,7 @@ namespace InjectDLL
     {
         public const int MAX_BUFFER_METADATA = 256;
         public const int MAX_BLOCK_SIZE = 1024;
-        public const string path = @"data.tam";
+        public const string metadataFileName = @"data.tam";
         public string currentDir = "";
         public const int FINAL_BLOCK = -1;
         public string currentDomain = "";
@@ -25,8 +25,8 @@ namespace InjectDLL
         LocalHook WriteFileHook, ReadFileHook, CreateProcessHook,ReplaceFileHook;
         Stack<String> Queue = new Stack<String>();
         String myChannelName;
-        const string Password = "testpassdine12345678";
-        const string Salt = "salt ne an di";
+        //const string Password = "testpassdine12345678";
+        const string Salt = "salt in my application";
         public SymmetricAlgorithm aes;
 
         public Main(
@@ -44,7 +44,7 @@ namespace InjectDLL
             }
             dataToEncrypt = new byte[MAX_BLOCK_SIZE];
             OutputDebugString(Encoding.ASCII.GetString(dataIgnition));
-            Rfc2898DeriveBytes key = new Rfc2898DeriveBytes(Password, Encoding.ASCII.GetBytes(Salt));
+            Rfc2898DeriveBytes key = new Rfc2898DeriveBytes(Global.PASSWORD, Encoding.ASCII.GetBytes(Salt));
             aes.Key = key.GetBytes(aes.KeySize / 8);
             aes.Padding = PaddingMode.Zeros;
             aes.Mode = CipherMode.CFB;
@@ -503,20 +503,21 @@ namespace InjectDLL
                         {
                             // Save metadata to USB
                             filePathToSave = filePath.Substring(filePath.IndexOf(usbDrive) + 1);
-                            fileData = usbDrive + path;
+                            fileData = usbDrive + metadataFileName;
                             allLines.Add(This.currentDomain);
                         }
                         else
                         {
                             // Save metadata to App Directory
                             filePathToSave = filePath;
-                            fileData = This.currentDir + path;
+                            fileData = This.currentDir + metadataFileName;
                         }
                         // Save to file
-                        allLines.Add(filePathToSave);
-                        allLines.Add(IVstring);                        
-                        File.AppendAllLines(fileData, allLines);
-                        File.SetAttributes(fileData, FileAttributes.Hidden);
+                        //allLines.Add(filePathToSave);
+                        //allLines.Add(IVstring);                        
+                        //File.AppendAllLines(fileData, allLines);
+                        //File.SetAttributes(fileData, FileAttributes.Hidden);
+                        FileHelper.SaveIVToFile(fileData, filePathToSave, IVstring);
                     }
                     else
                     {
@@ -582,10 +583,10 @@ namespace InjectDLL
             Main This = (Main)HookRuntimeInfo.Callback;
             StringBuilder fnPath = new StringBuilder((int)MAX_PATH);
             GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);
-            bool ReturnValue = false;
             string filePath = fnPath.ToString();
             string[] exts = This.Interface.getExtensions();
-            string usbDrive = CheckPath(filePath, This.Interface.getUSBDrives());
+            Global.USBDRIVER = CheckPath(filePath, This.Interface.getUSBDrives());
+            bool ReturnValue = false;
 
             if (!CheckExtension(filePath, exts))
             {
@@ -601,31 +602,22 @@ namespace InjectDLL
                     if (IV == null)
                     {
                         IV = new byte[This.aes.BlockSize / 8];
-                        string[] data;
-                        if (!string.IsNullOrEmpty(usbDrive))
+                        string metadataFilePath = "";
+                        if (!string.IsNullOrEmpty(Global.USBDRIVER))
                         {
                             // Read metadata from USB
-                            data = File.ReadAllLines(usbDrive + path);                            
+                            metadataFilePath = Global.USBDRIVER + metadataFileName;                            
                         }
                         else
                         {
                             // Read metadata from App Directory
-                            data = File.ReadAllLines(This.currentDir + path);
+                            metadataFilePath = This.currentDir + metadataFileName;
                         }
-                        for (int i = data.Length - 1; i >= 0; i--)
-                        {
-                            if (filePath.Contains(data[i]))
-                            {
-                                if (!string.IsNullOrEmpty(usbDrive) && !data[i-1].Contains(Environment.UserDomainName))
-                                    return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);                                
-                                string[] IVnumbers = data[i + 1].Split(' ');
-                                for (int j = 0; j < IV.Length; j++)
-                                {
-                                    IV[j] = (byte)int.Parse(IVnumbers[j]);
-                                }
-                                break;
-                            }
-                        }
+
+                        // FileHelper read IV from file
+                        if (!FileHelper.ReadIVFromFile(metadataFilePath, filePath, ref IV))
+                            return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped); ;
+                        
                         This.Interface.addIV(filePath, IV);
                     }
 
@@ -786,11 +778,11 @@ namespace InjectDLL
                         #region Get IV
                         if (!string.IsNullOrEmpty(usbDrive))
                         {
-                            dataFile = usbDrive + path;
+                            dataFile = usbDrive + metadataFileName;
                         }
                         else
                         {
-                            dataFile = This.currentDir + path;
+                            dataFile = This.currentDir + metadataFileName;
                         }
                         string[] data = File.ReadAllLines(dataFile);
                         bool hasIV = false;

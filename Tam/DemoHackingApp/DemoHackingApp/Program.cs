@@ -16,10 +16,24 @@ namespace DemoHackingApp
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
+            LoadAppSetting();
+
             //Application.Run(new HackingAppForm());
-            //Application.Run(new AuthenticationForm());
+            Application.Run(new AuthenticationForm());
             //Application.Run(new ExtensionsForm());
 
+        }
+
+        /// <summary>
+        /// Load Application Setting
+        /// Authentication type
+        /// ID + Password if remember
+        /// Domain field
+        /// </summary>
+        private static void LoadAppSetting()
+        {
+            Global.Initialization();
         }
     }
 }

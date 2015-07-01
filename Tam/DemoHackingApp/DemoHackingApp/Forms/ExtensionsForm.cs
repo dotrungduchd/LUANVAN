@@ -32,7 +32,7 @@ namespace DemoHackingApp
         private void btOK_Click(object sender, EventArgs e)
         {
             Config.SaveListExtensions(listExt);
-            Global.extsForm.Hide();
+            //Global.extsForm.Hide();
         }
 
     }

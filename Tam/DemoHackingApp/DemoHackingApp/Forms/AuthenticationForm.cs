@@ -14,6 +14,24 @@ namespace DemoHackingApp
         public AuthenticationForm()
         {
             InitializeComponent();
+
+            if (Global.AUTH_TYPE == (int)AuthType.Personal)
+            {
+                pnDomain.Enabled = false;
+                rbPersonnal.Checked = true;
+
+                tbID.Text = Global.ID;
+            }
+            else
+            {
+                pnPersonal.Enabled = false;
+                rbDomain.Checked = true;
+
+                rbOnlyMe.Checked = Global.DOMAIN_PERMIT == (int)DomainPermission.OnlyMe;
+                rbAllUserDomain.Checked = Global.DOMAIN_PERMIT == (int)DomainPermission.AllUserInDomain;
+                rbSomeOneDomain.Checked = Global.DOMAIN_PERMIT == (int)DomainPermission.SomeUserInDomain;
+            }
+
         }
 
         private void AuthenticationForm_Load(object sender, EventArgs e)
@@ -46,9 +64,11 @@ namespace DemoHackingApp
         /// <param name="e"></param>
         private void btAuth_Click(object sender, EventArgs e)
         {
-            // Update Global variable
-            Global.ID = Global.KEY01 = tbID.Text;
-            Global.PASSWORD = Global.KEY02 = tbPassword.Text;
+            #region Persional
+            // Update Global ID Password variable
+            Global.ID = tbID.Text;
+            Global.PASSWORD = tbPassword.Text;
+            Global.REMEMBER_ME = isRememberMe;
 
             // Update Rememberme
             Config.UpdateAppSetting(Config.REMEMBER_ME, isRememberMe.ToString());
@@ -56,7 +76,16 @@ namespace DemoHackingApp
             // Save ID+password if app is remember info
             Config.AddAppSetting(Config.ID, Global.ID);
             Config.AddAppSetting(Config.PASSWORD, Global.PASSWORD);
+            #endregion
 
+            #region Domain
+            // Update global variable
+            Global.DOMAIN_PERMIT = DomainPermit;
+
+            // Save to config file
+            Config.UpdateAppSetting(Config.DOMAIN_PERMIT, Global.DOMAIN_PERMIT.ToString());
+
+            #endregion
         }
 
         #endregion
@@ -82,16 +111,6 @@ namespace DemoHackingApp
         private void rbSomeOneDomain_CheckedChanged(object sender, EventArgs e)
         {
             DomainPermit = (int)DomainPermission.SomeUserInDomain;
-        }
-
-        private void btApplyDomain_Click(object sender, EventArgs e)
-        {
-            // Update global variable
-            Global.DOMAIN_PERMIT = DomainPermit;
-
-            // Save to config file
-            Config.UpdateAppSetting(Config.DOMAIN_PERMIT, Global.DOMAIN_PERMIT.ToString());
-
         }
 
         #endregion

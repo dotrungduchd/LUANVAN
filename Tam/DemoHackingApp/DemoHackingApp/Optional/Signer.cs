@@ -20,10 +20,10 @@ namespace DemoHackingApp
             }
         }
 
-        public static byte[] Sign(byte[] content, string id, string password)
+        public static byte[] Sign(byte[] content, string key01, string key02)
         {
             CspParameters cspParams = new CspParameters();
-            cspParams.KeyContainerName = id + password;
+            cspParams.KeyContainerName = key01 + key02;
 
             //Create a new instance of the RSACryptoServiceProvider class.
             RSACryptoServiceProvider RSA = new RSACryptoServiceProvider(2048, cspParams);
@@ -32,10 +32,10 @@ namespace DemoHackingApp
             return data;
         }
 
-        public static bool Verity(byte[] content, byte[] signature, string id, string password)
+        public static bool Verity(byte[] content, byte[] signature, string key01, string key02)
         {
             CspParameters cspParams = new CspParameters();
-            cspParams.KeyContainerName = id + password;
+            cspParams.KeyContainerName = key01 + key02;
 
             //Create a new instance of the RSACryptoServiceProvider class.
             RSACryptoServiceProvider RSA = new RSACryptoServiceProvider(2048, cspParams);
