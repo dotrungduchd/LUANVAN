@@ -503,8 +503,7 @@ namespace InjectDLL
                         {
                             // Save metadata to USB
                             filePathToSave = filePath.Substring(filePath.IndexOf(usbDrive) + 1);
-                            fileData = usbDrive + path;
-                            allLines.Add(This.currentDomain);
+                            fileData = usbDrive + path;                            
                         }
                         else
                         {
@@ -513,6 +512,7 @@ namespace InjectDLL
                             fileData = This.currentDir + path;
                         }
                         // Save to file
+                        allLines.Add(This.currentDomain);
                         allLines.Add(filePathToSave);
                         allLines.Add(IVstring);                        
                         File.AppendAllLines(fileData, allLines);
@@ -616,7 +616,7 @@ namespace InjectDLL
                         {
                             if (filePath.Contains(data[i]))
                             {
-                                if (!string.IsNullOrEmpty(usbDrive) && !data[i-1].Contains(Environment.UserDomainName))
+                                if (data[i-1].Contains(Environment.UserDomainName))
                                     return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);                                
                                 string[] IVnumbers = data[i + 1].Split(' ');
                                 for (int j = 0; j < IV.Length; j++)
