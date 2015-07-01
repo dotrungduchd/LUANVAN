@@ -570,33 +570,38 @@ namespace InjectDLL
                 try
                 {
                     int fileSize = (int)GetFileSize(hFile, IntPtr.Zero);
-
-                    int fileBytesWritten = This.GetFileBytesWritten(filePath);
-
                     byte[] bytes = ReadDataFromPointer(lpBuffer, nNumberOfBytesToWrite);
-                    if (fileBytesWritten == 0)
+                    byte[] IV = This.Interface.getIV(filePath);
+                    if (IV == null)
                     {
-                        // Khoi tao IV va block data can thiet de ma hoa
+                        // Generate IV and block data to encrypt
                         This.aes.GenerateIV();
-                        ICryptoTransform encryptor = This.aes.CreateEncryptor();
-                        MemoryStream msEncrypt = new MemoryStream();
-                        CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
-                        csEncrypt.Write(This.dataIgnition, 0, MAX_BLOCK_SIZE);
-                        csEncrypt.FlushFinalBlock();
-                        Array.Copy(msEncrypt.ToArray(), This.dataToEncrypt, MAX_BLOCK_SIZE);
-                        msEncrypt.Close();
-                        csEncrypt.Close();
-                        // Luu IV vao file
+                        This.Interface.addIV(filePath, This.aes.IV);
                         string IVstring = "";
                         for (int i = 0; i < This.aes.IV.Length; i++)
                         {
                             IVstring += (This.aes.IV[i].ToString() + " ");
                         }
+                        // Save IV into file
                         List<string> allLines = new List<string>();
                         allLines.Add(filePath);
                         allLines.Add(IVstring);
-                        File.AppendAllLines(path, allLines);                        
+                        File.AppendAllLines(path, allLines);
                     }
+                    else
+                    {
+                        This.aes.IV = IV;
+                    }
+                    ICryptoTransform encryptor = This.aes.CreateEncryptor();
+                    MemoryStream msEncrypt = new MemoryStream();
+                    CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
+                    csEncrypt.Write(This.dataIgnition, 0, MAX_BLOCK_SIZE);
+                    csEncrypt.FlushFinalBlock();
+                    Array.Copy(msEncrypt.ToArray(), This.dataToEncrypt, MAX_BLOCK_SIZE);
+                    msEncrypt.Close();
+                    csEncrypt.Close();
+                    
+                    
 
                     lock (This.Queue)
                     {
@@ -624,7 +629,7 @@ namespace InjectDLL
                         //    This.SetFileBytesWritten(filePath, (int)nNumberOfBytesToWrite);
                         //}
 
-                        //Ma hoa du lieu theo tung block
+                        //Encrypt data block by block
                         resultBlock = new byte[nNumberOfBytesToWrite];
                         for (int i = 0; i < nNumberOfBytesToWrite; i = i + MAX_BLOCK_SIZE)
                         {
@@ -637,37 +642,16 @@ namespace InjectDLL
                             for (int j = 0; j < nBytesToEncrypt; j++)
                             {
                                 tmpRes[j] = (byte)(tmpData[j] ^ This.dataToEncrypt[j]);
-                            }
-                            //ICryptoTransform encryptor = This.aes.CreateEncryptor();
-                            //MemoryStream msEncrypt = new MemoryStream();
-                            //CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
-                            //csEncrypt.Write(bytes, i, nBytesToEncrypt);
-                            //csEncrypt.FlushFinalBlock();
+                            }                            
                             Array.Copy(tmpRes, 0, resultBlock, i, nBytesToEncrypt);
-                            //msEncrypt.Close();
-                            //csEncrypt.Close();
                         }
-                        // Chep ket qua mang byte da duoc ma hoa vao con tro
+                        // Copy data in byte array into buffer
                         Marshal.Copy(resultBlock, 0, lpBuffer, (int)nNumberOfBytesToWrite);
-                        This.SetFileBytesWritten(filePath, resultBlock.Length);
-                        if (fileBytesWritten + nNumberOfBytesToWrite > fileSize)
-                        {
-                            This.SetFileBytesWritten(filePath, FINAL_BLOCK);
-                        }
-
-                        //This.SetFileBytesWritten(filePath, (int)nNumberOfBytesToWrite);
-                        //byte[] metaData = new byte[MAX_BUFFER_METADATA];
-                        //Array.Copy(This.aes.IV, metaData, This.aes.IV.Length);
-                        //byte[] blockSize = BitConverter.GetBytes(MAX_BUFFER_METADATA);
-                        //Array.Copy(blockSize, 0, metaData, MAX_BUFFER_METADATA - blockSize.Length, blockSize.Length);
-                        ////Array.Copy(metaData, 0, resultBlock, nNumberOfBytesToWrite, MAX_BUFFER_METADATA);
-                        //IntPtr lpMetaData = Marshal.AllocHGlobal(MAX_BUFFER_METADATA);
-                        //Marshal.Copy(metaData, 0, lpMetaData, MAX_BUFFER_METADATA);
-                        //lpOverlapped.OffsetLow += lpOverlapped.InternalHigh.ToInt32();
-                        //WriteFile(hFile, lpMetaData, MAX_BUFFER_METADATA, lpNumberOfBytesWritten, ref lpOverlapped);
-                        //Marshal.FreeHGlobal(lpMetaData);
-
-
+                        //This.SetFileBytesWritten(filePath, resultBlock.Length);
+                        //if (fileBytesWritten + nNumberOfBytesToWrite > fileSize)
+                        //{
+                        //    This.SetFileBytesWritten(filePath, FINAL_BLOCK);
+                        //}
                         OutputDebugString("Write " + Encoding.ASCII.GetString(This.aes.IV));
                         This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-WriteFile:" +
                             RemoteHooking.GetCurrentThreadId() + "]:" + bytes.Length.ToString() + "-" + fnPath + "-" + extra_size);
@@ -759,23 +743,28 @@ namespace InjectDLL
                         //}                
                     }
 
-                    // Lay IV tu file va chuan bi block data de giai ma
-                    string[] data = File.ReadAllLines(path);
-                    for (int i = data.Length - 1; i >= 0; i--)
+                    // Get IV from file and generate block data to decrypt
+                    byte[] IV = This.Interface.getIV(filePath);
+                    if (IV == null)
                     {
-                        if (data[i].Contains(filePath))
+                        IV = new byte[This.aes.BlockSize / 8];
+                        string[] data = File.ReadAllLines(path);
+                        for (int i = data.Length - 1; i >= 0; i--)
                         {
-                            OutputDebugString(data[i + 1]);
-                            string[] IVnumbers = data[i + 1].Split(' ');
-                            byte[] newIV = new byte[This.aes.BlockSize / 8];
-                            for (int j = 0; j < newIV.Length; j++)
+                            if (data[i].Contains(filePath))
                             {
-                                newIV[j] = (byte)int.Parse(IVnumbers[j]);
+                                OutputDebugString(data[i + 1]);
+                                string[] IVnumbers = data[i + 1].Split(' ');
+                                for (int j = 0; j < IV.Length; j++)
+                                {
+                                    IV[j] = (byte)int.Parse(IVnumbers[j]);
+                                }                                
+                                break;
                             }
-                            This.aes.IV = newIV;
-                            break;
                         }
+                        This.Interface.addIV(filePath, IV);
                     }
+                    This.aes.IV = IV;
                     ICryptoTransform encryptor = This.aes.CreateEncryptor();
                     MemoryStream msEncrypt = new MemoryStream();
                     CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
@@ -795,7 +784,7 @@ namespace InjectDLL
                     //    SetFilePointer(hFile, -MAX_BUFFER_METADATA, out lpDistanceMoveHigh, EMoveMethod.Current);
                     //}
 
-                    // Lay vi tri con tro hien tai
+                    // Get the current offset
                     int startPos = 0;
                     int oldOffset = -1;
                     int lpDistanceMoveHigh = 0;
@@ -820,7 +809,7 @@ namespace InjectDLL
                         //}
                         startPos = currentOffset;
                     }
-                    // Doc file va luu gia tri 
+                    // Call original API to get buffer
                     ReturnValue = This.ReadFileFunc(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
                     //if (oldOffset != -1)
                     //{
@@ -832,7 +821,7 @@ namespace InjectDLL
                     //}
                     //int offsetAfterRead = (int)SetFilePointer(hFile, 0, out lpDistanceMoveHigh, EMoveMethod.Current);
 
-                    // Lay so byte da doc
+                    // Get number of bytes read
                     int bytesCount = (int)nNumberOfBytesToRead;
                     if (!lpNumberOfBytesRead.Equals(IntPtr.Zero) && Marshal.ReadInt32(lpNumberOfBytesRead) != 0)
                     {
@@ -846,10 +835,10 @@ namespace InjectDLL
 
                     
                     This.SetFileBytesRead(filePath, bytesCount);
-                    // Doc du lieu tu con tro len mang byte
+                    // Read data from buffer 
                     byte[] bytes = ReadDataFromPointer(lpBuffer, (uint)bytesCount);
 
-                    // Ma hoa File
+                    // Decrypt data and copy it to buffer (replace the encrypted data)
                     // ---- Cach 2 ----
                     byte[] resultBlock = new byte[bytesCount];
                     OutputDebugString("Start Pos: " + startPos);
@@ -861,72 +850,11 @@ namespace InjectDLL
                     Marshal.Copy(resultBlock, 0, lpBuffer, bytesCount);
                     // ---- Cach 2 ----
 
-                    // ---- Cach 1 ----
-                    //int sizeToRead = MAX_BLOCK_SIZE;
-                    //fileSize = fileSize - MAX_BUFFER_METADATA;
-                    //int prevOffset = 0;
-                    //if (currentOffset % MAX_BLOCK_SIZE == 0)
-                    //{
-                    //    prevOffset = currentOffset;
-                    //    if (bytesCount > MAX_BLOCK_SIZE)
-                    //    {
-                    //        if (bytesCount % MAX_BLOCK_SIZE != 0)
-                    //            sizeToRead = (bytesCount / MAX_BLOCK_SIZE + 1) * MAX_BLOCK_SIZE;
-                    //        else
-                    //            sizeToRead = (bytesCount / MAX_BLOCK_SIZE) * MAX_BLOCK_SIZE;
-                    //    }
-                    //}
-                    //else
-                    //{
-                    //    prevOffset = (currentOffset / MAX_BLOCK_SIZE) * MAX_BLOCK_SIZE;
-                    //    if (currentOffset + bytesCount > prevOffset + MAX_BLOCK_SIZE)
-                    //    {
-                    //        sizeToRead = (bytesCount / MAX_BLOCK_SIZE + 1) * MAX_BLOCK_SIZE;
-                    //    }
-                    //    if (currentOffset + bytesCount > fileSize)
-                    //    {
-                    //        sizeToRead = fileSize - prevOffset;
-                    //    }                                
-                    //}                            
-                    //SetFilePointer(hFile, prevOffset, out lpDistanceMoveHigh, EMoveMethod.Begin);                            
-                    //IntPtr HTMP = Marshal.AllocHGlobal(sizeToRead);                            
-                    //This.ReadFileFunc(hFile, HTMP, (uint)sizeToRead, lpNumberOfBytesRead, ref lpOverlapped);
-                    //SetFilePointer(hFile, currentOffset + bytesCount, out lpDistanceMoveHigh, EMoveMethod.Begin);
-                    //byte[] encryptedData = ReadDataFromPointer(HTMP, (uint)sizeToRead);                            
-                    //Marshal.FreeHGlobal(HTMP);                                                   
-                    //byte[] resultBlock = new byte[sizeToRead];
-                    //int aesBlockSize = This.aes.BlockSize / 8;
-                    //for (int i = 0; i < encryptedData.Length; i += MAX_BLOCK_SIZE)
-                    //{
-                    //    ICryptoTransform decryptor = This.aes.CreateDecryptor();                                
-                    //    int nBytesToDecrypt = MAX_BLOCK_SIZE;
-                    //    int extraSize = 0;
-                    //    if (i + MAX_BLOCK_SIZE > encryptedData.Length)
-                    //    {
-                    //        nBytesToDecrypt = encryptedData.Length - i;
-                    //        extraSize = (aesBlockSize) * (nBytesToDecrypt / aesBlockSize + 1) - nBytesToDecrypt;
-                    //    }
-                    //    byte[] encryptedPart = new byte[nBytesToDecrypt + extraSize];
-                    //    Array.Copy(encryptedData, i, encryptedPart, 0, nBytesToDecrypt);
-                    //    MemoryStream msDecrypt = new MemoryStream();
-                    //    CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Write);                                
-                    //    csDecrypt.Write(encryptedPart, 0, nBytesToDecrypt + extraSize);
-                    //    csDecrypt.FlushFinalBlock();
-                    //    Array.Copy(msDecrypt.ToArray(), 0, resultBlock, i, nBytesToDecrypt);
-                    //    msDecrypt.Close();
-                    //    csDecrypt.Close();                                
-                    //}
-                    //OutputDebugString("Read " + sizeToRead + " " +  bytesCount +" "+ prevOffset + " " + currentOffset + " ");
-                    //Marshal.Copy(resultBlock, currentOffset - prevOffset, lpBuffer, (int)bytesCount);                            
-                    // ---- Cach 1 ----
-
-
                     lock (This.Queue)
                     {
                         DateTime now = DateTime.Now;
                         This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-ReadFile:" +
                             RemoteHooking.GetCurrentThreadId() + ":" + bytesCount + "]:" + "-" + fnPath + "-" + currentOffset + "\n");
-
                     }
 
                 }
