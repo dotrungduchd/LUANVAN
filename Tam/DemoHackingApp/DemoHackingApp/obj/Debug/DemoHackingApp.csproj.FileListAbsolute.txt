@@ -24,3 +24,13 @@ D:\Code\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.ExtensionsForm.re
 E:\HK1_14-15\KhoaLuan\GitHub\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\bin\Debug\DemoHackingApp.exe.config
 E:\HK1_14-15\KhoaLuan\GitHub\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.exe
 E:\HK1_14-15\KhoaLuan\GitHub\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.pdb
+D:\Code\LUANVAN\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\bin\Debug\DemoHackingApp.exe.config
+D:\Code\LUANVAN\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.exe
+D:\Code\LUANVAN\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.pdb
+D:\Code\LUANVAN\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.csprojResolveAssemblyReference.cache
+D:\Code\LUANVAN\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.AuthenticationForm.resources
+D:\Code\LUANVAN\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.ExtensionsForm.resources
+D:\Code\LUANVAN\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.HackingAppForm.resources
+D:\Code\LUANVAN\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.Properties.Resources.resources
+D:\Code\LUANVAN\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.csproj.GenerateResource.Cache
+D:\Code\LUANVAN\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.exe.licenses

@@ -40,6 +40,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>bin\Debug\EasyHook.dll</HintPath>
     </Reference>
+    <Reference Include="InjectDLL, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\InjectDLL\obj\Debug\InjectDLL.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
@@ -72,9 +76,7 @@
     <Compile Include="Forms\ExtensionsForm.Designer.cs">
       <DependentUpon>ExtensionsForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Optional\Users.cs" />
     <Compile Include="Optional\FileExtensions.cs" />
-    <Compile Include="Optional\FileHelper.cs" />
     <Compile Include="Forms\HackingAppForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -106,7 +108,9 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
-    <None Include="App.config" />
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

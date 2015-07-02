@@ -43,7 +43,7 @@
             ".docx",
             ".xls",
             ".xlsx",
-            " .ppt",
+            ".ppt",
             ".pptx",
             ".pdf",
             ".rar",
@@ -60,7 +60,7 @@
             this.label1.BackColor = System.Drawing.Color.Transparent;
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Italic))), System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label1.ForeColor = System.Drawing.SystemColors.ButtonFace;
-            this.label1.Location = new System.Drawing.Point(126, 146);
+            this.label1.Location = new System.Drawing.Point(126, 151);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(252, 16);
             this.label1.TabIndex = 1;
@@ -68,7 +68,7 @@
             // 
             // btApply
             // 
-            this.btApply.Location = new System.Drawing.Point(303, 109);
+            this.btApply.Location = new System.Drawing.Point(303, 114);
             this.btApply.Name = "btApply";
             this.btApply.Size = new System.Drawing.Size(75, 23);
             this.btApply.TabIndex = 2;
@@ -78,7 +78,7 @@
             // 
             // btOK
             // 
-            this.btOK.Location = new System.Drawing.Point(213, 109);
+            this.btOK.Location = new System.Drawing.Point(213, 114);
             this.btOK.Name = "btOK";
             this.btOK.Size = new System.Drawing.Size(75, 23);
             this.btOK.TabIndex = 3;
@@ -92,7 +92,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackgroundImage = global::DemoHackingApp.Properties.Resources.windows_7_Blue;
             this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.ClientSize = new System.Drawing.Size(390, 171);
+            this.ClientSize = new System.Drawing.Size(390, 177);
             this.Controls.Add(this.btOK);
             this.Controls.Add(this.btApply);
             this.Controls.Add(this.clbExts);
