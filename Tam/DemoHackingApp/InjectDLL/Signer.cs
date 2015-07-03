@@ -31,7 +31,7 @@ namespace InjectDLL
             cspParams.KeyContainerName = key;
 
             //Create a new instance of the RSACryptoServiceProvider class.
-            RSACryptoServiceProvider RSA = new RSACryptoServiceProvider(2048, cspParams);
+            RSACryptoServiceProvider RSA = new RSACryptoServiceProvider(1024, cspParams);
 
             byte[] data = RSA.Encrypt(content, false);
             return data;
@@ -43,7 +43,7 @@ namespace InjectDLL
             cspParams.KeyContainerName = key;
 
             //Create a new instance of the RSACryptoServiceProvider class.
-            RSACryptoServiceProvider RSA = new RSACryptoServiceProvider(2048, cspParams);
+            RSACryptoServiceProvider RSA = new RSACryptoServiceProvider(1024, cspParams);
 
             byte[] data = RSA.Decrypt(content, false);
 

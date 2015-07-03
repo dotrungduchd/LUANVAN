@@ -37,11 +37,12 @@
             this.label1 = new System.Windows.Forms.Label();
             this.rbPersonnal = new System.Windows.Forms.RadioButton();
             this.pnDomain = new System.Windows.Forms.Panel();
-            this.rbSomeOneDomain = new System.Windows.Forms.RadioButton();
             this.label3 = new System.Windows.Forms.Label();
             this.rbAllUserDomain = new System.Windows.Forms.RadioButton();
             this.rbOnlyMe = new System.Windows.Forms.RadioButton();
             this.rbDomain = new System.Windows.Forms.RadioButton();
+            this.rbSomeOneDomain = new System.Windows.Forms.RadioButton();
+            this.btApplyDomain = new System.Windows.Forms.Button();
             this.pnPersonal.SuspendLayout();
             this.pnDomain.SuspendLayout();
             this.SuspendLayout();
@@ -51,6 +52,7 @@
             this.pnPersonal.BackColor = System.Drawing.Color.Transparent;
             this.pnPersonal.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.pnPersonal.Controls.Add(this.cbRememberMe);
+            this.pnPersonal.Controls.Add(this.btAuth);
             this.pnPersonal.Controls.Add(this.tbPassword);
             this.pnPersonal.Controls.Add(this.tbID);
             this.pnPersonal.Controls.Add(this.label2);
@@ -75,8 +77,8 @@
             // 
             // btAuth
             // 
-            this.btAuth.BackColor = System.Drawing.Color.White;
-            this.btAuth.Location = new System.Drawing.Point(224, 241);
+            this.btAuth.BackColor = System.Drawing.Color.Lime;
+            this.btAuth.Location = new System.Drawing.Point(126, 135);
             this.btAuth.Name = "btAuth";
             this.btAuth.Size = new System.Drawing.Size(100, 42);
             this.btAuth.TabIndex = 4;
@@ -141,6 +143,7 @@
             // 
             this.pnDomain.BackColor = System.Drawing.Color.Transparent;
             this.pnDomain.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
+            this.pnDomain.Controls.Add(this.btApplyDomain);
             this.pnDomain.Controls.Add(this.rbSomeOneDomain);
             this.pnDomain.Controls.Add(this.label3);
             this.pnDomain.Controls.Add(this.rbAllUserDomain);
@@ -149,19 +152,6 @@
             this.pnDomain.Name = "pnDomain";
             this.pnDomain.Size = new System.Drawing.Size(250, 200);
             this.pnDomain.TabIndex = 1;
-            // 
-            // rbSomeOneDomain
-            // 
-            this.rbSomeOneDomain.AutoSize = true;
-            this.rbSomeOneDomain.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Italic))), System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.rbSomeOneDomain.ForeColor = System.Drawing.Color.Fuchsia;
-            this.rbSomeOneDomain.Location = new System.Drawing.Point(34, 109);
-            this.rbSomeOneDomain.Name = "rbSomeOneDomain";
-            this.rbSomeOneDomain.Size = new System.Drawing.Size(197, 20);
-            this.rbSomeOneDomain.TabIndex = 3;
-            this.rbSomeOneDomain.Text = "Someone in your domain";
-            this.rbSomeOneDomain.UseVisualStyleBackColor = true;
-            this.rbSomeOneDomain.CheckedChanged += new System.EventHandler(this.rbSomeOneDomain_CheckedChanged);
             // 
             // label3
             // 
@@ -218,15 +208,38 @@
             this.rbDomain.UseVisualStyleBackColor = false;
             this.rbDomain.CheckedChanged += new System.EventHandler(this.rbDomain_CheckedChanged);
             // 
+            // rbSomeOneDomain
+            // 
+            this.rbSomeOneDomain.AutoSize = true;
+            this.rbSomeOneDomain.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Italic))), System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.rbSomeOneDomain.ForeColor = System.Drawing.Color.Fuchsia;
+            this.rbSomeOneDomain.Location = new System.Drawing.Point(34, 109);
+            this.rbSomeOneDomain.Name = "rbSomeOneDomain";
+            this.rbSomeOneDomain.Size = new System.Drawing.Size(197, 20);
+            this.rbSomeOneDomain.TabIndex = 3;
+            this.rbSomeOneDomain.Text = "Someone in your domain";
+            this.rbSomeOneDomain.UseVisualStyleBackColor = true;
+            this.rbSomeOneDomain.CheckedChanged += new System.EventHandler(this.rbSomeOneDomain_CheckedChanged);
+            // 
+            // btApplyDomain
+            // 
+            this.btApplyDomain.BackColor = System.Drawing.Color.Magenta;
+            this.btApplyDomain.Location = new System.Drawing.Point(79, 135);
+            this.btApplyDomain.Name = "btApplyDomain";
+            this.btApplyDomain.Size = new System.Drawing.Size(93, 42);
+            this.btApplyDomain.TabIndex = 4;
+            this.btApplyDomain.Text = "Apply";
+            this.btApplyDomain.UseVisualStyleBackColor = false;
+            this.btApplyDomain.Click += new System.EventHandler(this.btApplyDomain_Click);
+            // 
             // AuthenticationForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackgroundImage = global::DemoHackingApp.Properties.Resources.windows_7_Blue;
             this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.ClientSize = new System.Drawing.Size(544, 290);
+            this.ClientSize = new System.Drawing.Size(544, 251);
             this.Controls.Add(this.rbDomain);
-            this.Controls.Add(this.btAuth);
             this.Controls.Add(this.rbPersonnal);
             this.Controls.Add(this.pnDomain);
             this.Controls.Add(this.pnPersonal);
@@ -258,5 +271,6 @@
         private System.Windows.Forms.CheckBox cbRememberMe;
         private System.Windows.Forms.Button btAuth;
         private System.Windows.Forms.RadioButton rbSomeOneDomain;
+        private System.Windows.Forms.Button btApplyDomain;
     }
 }

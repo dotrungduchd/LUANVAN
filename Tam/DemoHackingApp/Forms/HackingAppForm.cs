@@ -187,7 +187,6 @@ namespace DemoHackingApp
                 RemoteHooking.CreateAndInject("explorer.exe", "", 0, LibraryPath, LibraryPath, out processId, ChannelName);
             }
             this.WindowState = FormWindowState.Minimized;
-            Global.currentDomain = Environment.UserDomainName;
         }
 
         #region Device Event
@@ -267,14 +266,19 @@ namespace DemoHackingApp
 
         private void btExtensions_Click(object sender, EventArgs e)
         {
-            ExtensionsForm extForm = new ExtensionsForm();
-            extForm.Show();
+
         }
 
         private void btAuthenticate_Click(object sender, EventArgs e)
         {
-            AuthenticationForm authForm = new AuthenticationForm();
-            authForm.Show();
+            Global.authForm = new AuthenticationForm();
+            Global.authForm.Show();
+
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+
         }
 
     }

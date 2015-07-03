@@ -1,7 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30723.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DemoHackingApp", "DemoHackingApp\DemoHackingApp.csproj", "{AB8521BD-E4DC-4FFB-AB41-751B6E885402}"
+	ProjectSection(ProjectDependencies) = postProject
+		{83AA2258-FF13-4641-B0FF-CB29D886D9D2} = {83AA2258-FF13-4641-B0FF-CB29D886D9D2}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InjectDLL", "InjectDLL\InjectDLL.csproj", "{83AA2258-FF13-4641-B0FF-CB29D886D9D2}"
 EndProject

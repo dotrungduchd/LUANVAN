@@ -27,13 +27,11 @@ namespace DemoHackingApp
         public static bool REMEMBER_ME = false;
         public static int DOMAIN_PERMIT = (int)DomainPermission.OnlyMe;
 
-        public static string KEY01 = ""; // = ID = USER_DOMAIN_NAME
-        public static string KEY02 = ""; // = PASSWORD = DOMAIN_NAME
+        public static string KEY01 = "ABC"; // = ID = USER_DOMAIN_NAME
+        public static string KEY02 = "XYZ"; // = PASSWORD = DOMAIN_NAME
 
-        public static string METADATA_FILENAME = "";
+        public static string METADATA_FILENAME = "data.tam";
 
-        //public static AuthenticationForm authForm = new AuthenticationForm();
-        //public static ExtensionsForm extsForm = new ExtensionsForm();
         public static void GetListExtensions()
         {
             extensions = Config.GetListExtensions();
@@ -70,8 +68,22 @@ namespace DemoHackingApp
             try
             {
                 AUTH_TYPE = int.Parse(Config.GetAppSetting(Config.AUTH_TYPE));
-                DOMAIN_PERMIT = int.Parse(Config.GetAppSetting(Config.DOMAIN_PERMIT));
                 REMEMBER_ME = bool.Parse(Config.GetAppSetting(Config.REMEMBER_ME));
+                ID = Config.GetAppSetting(Config.ID);
+                PASSWORD = Config.GetAppSetting(Config.PASSWORD);
+                USER_DOMAIN_NAME = Config.GetAppSetting(Config.USER_DOMAIN_NAME);
+                DOMAIN_NAME = Config.GetAppSetting(Config.DOMAIN_NAME);
+                DOMAIN_PERMIT = int.Parse(Config.GetAppSetting(Config.DOMAIN_PERMIT));
+                if (AUTH_TYPE == (int)AuthType.Personal)
+                {
+                    KEY01 = ID;
+                    KEY02 = PASSWORD;
+                }
+                else if (AUTH_TYPE == (int)AuthType.Domain)
+                {
+                    KEY01 = USER_DOMAIN_NAME;
+                    KEY02 = DOMAIN_NAME;
+                }
             }
             catch
             {

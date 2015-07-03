@@ -9,10 +9,12 @@ namespace DemoHackingApp
     public class Config
     {
         public static string AUTH_TYPE = "AuthType";
-        public static string DOMAIN_PERMIT = "DomainPermit";
         public static string REMEMBER_ME = "RememberMe";
         public static string ID = "ID";
         public static string PASSWORD = "Password";
+        public static string USER_DOMAIN_NAME = "UserDomainName";
+        public static string DOMAIN_NAME = "DomainName";
+        public static string DOMAIN_PERMIT = "DomainPermit";
 
 
         #region Extensions
@@ -43,7 +45,20 @@ namespace DemoHackingApp
 
         public static void SaveListExtensions(List<string> listExt)
         {
-
+            List<string> fileExt = FileExtensions.FileExtensionsList.Keys.ToList();
+            for (int i = 0; i < fileExt.Count; i++)
+            {
+                for (int j = 0; j < listExt.Count; j++)
+                {
+                    if (fileExt[i] == listExt[j])
+                    {
+                        FileExtensions.EditExistExtension(listExt[j], "True");
+                        listExt.Remove(listExt[j]);
+                        break;
+                    }
+                    FileExtensions.EditExistExtension(fileExt[i], "False");
+                }
+            }
         }
 
         #endregion

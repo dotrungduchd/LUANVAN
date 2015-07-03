@@ -1,13 +1,36 @@
-﻿using System;
+﻿using InjectDLL;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace DemoHackingApp
 {
     public class ProcessInterface : MarshalByRefObject
     {
+        public string GetKey01()
+        {
+            return Global.KEY01;
+        }
+
+        public string GetKey02()
+        {
+            return Global.KEY02;
+        }
+
+        //private const string salt = "123$%^ujFGH";
+        //public AesCryptoServiceProvider UpdateAesKey()
+        //{
+        //    Rfc2898DeriveBytes key = new Rfc2898DeriveBytes(GetKey02(), Encoding.ASCII.GetBytes(salt));
+        //    AesCryptoServiceProvider aes = new AesCryptoServiceProvider();
+        //    aes.Key = key.GetBytes(aes.KeySize / 8);
+        //    aes.Padding = PaddingMode.Zeros;
+        //    aes.Mode = CipherMode.CFB;
+        //    return aes;
+        //}
+
         public void IsInstalled(Int32 InClientPID)
         {
             Console.WriteLine("FileMon has been installed in target {0}.\r\n", InClientPID);            
