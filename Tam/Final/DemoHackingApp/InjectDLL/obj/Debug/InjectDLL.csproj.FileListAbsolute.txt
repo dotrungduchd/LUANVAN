@@ -1,0 +1,5 @@
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.csprojResolveAssemblyReference.cache
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\bin\Debug\InjectDLL.dll
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\bin\Debug\InjectDLL.pdb
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.dll
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.pdb
