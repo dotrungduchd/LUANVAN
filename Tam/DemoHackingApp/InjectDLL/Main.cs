@@ -14,22 +14,19 @@ namespace InjectDLL
 {
     public class Main : IEntryPoint
     {
-        private const int MAX_BUFFER_METADATA = 256;
-        private const int MAX_BLOCK_SIZE = 1024;
-        private const int IV_SIZE = 16;
-        private const int FINAL_BLOCK = -1;
-        private const string Salt = "salt in my application";
-        private const string metadataFileName = @"data.tam";
-
-        private string currentDir = "";
-        private string currentDomain = "";
+        public const int MAX_BUFFER_METADATA = 256;
+        public const int MAX_BLOCK_SIZE = 1024;
+        public const string path = @"data.tam";
+        public string currentDir = "";
+        public const int FINAL_BLOCK = -1;
         byte[] dataIgnition, dataToEncrypt;
-
         ProcessInterface Interface;
-        LocalHook WriteFileHook, ReadFileHook, CreateProcessHook,ReplaceFileHook;
+        LocalHook WriteFileHook, ReadFileHook, CreateProcessHook, ReplaceFileHook, MoveFileExWHook, DeleteFileHook;
         Stack<String> Queue = new Stack<String>();
         String myChannelName;
-        static SymmetricAlgorithm aes;
+        const string Password = "testpassdine12345678";
+        const string Salt = "salt ne an di";
+        public SymmetricAlgorithm aes;
 
         public Main(
              RemoteHooking.IContext InContext,
@@ -37,30 +34,22 @@ namespace InjectDLL
         {
             // connect to host...
             Interface = RemoteHooking.IpcConnectClient<ProcessInterface>(InChannelName);
-
-            Rfc2898DeriveBytes key = new Rfc2898DeriveBytes(Interface.GetKey02(), Encoding.ASCII.GetBytes(Salt));
-            AesCryptoServiceProvider aes = new AesCryptoServiceProvider();
-            aes.Key = key.GetBytes(aes.KeySize / 8);
-            aes.Padding = PaddingMode.Zeros;
-            aes.Mode = CipherMode.CFB;
-            OutputDebugString("AES KEY: " + Convert.ToBase64String(aes.Key));
-
             myChannelName = InChannelName;
+            aes = new AesCryptoServiceProvider();
             dataIgnition = new byte[MAX_BLOCK_SIZE];
-
             for (int i = 0; i < MAX_BLOCK_SIZE; i++)
             {
                 dataIgnition[i] = (byte)i;
             }
-
             dataToEncrypt = new byte[MAX_BLOCK_SIZE];
-            
+            OutputDebugString(Encoding.ASCII.GetString(dataIgnition));
+            Rfc2898DeriveBytes key = new Rfc2898DeriveBytes(Password, Encoding.ASCII.GetBytes(Salt));
+            aes.Key = key.GetBytes(aes.KeySize / 8);
+            aes.Padding = PaddingMode.Zeros;
+            aes.Mode = CipherMode.CFB;
             currentDir = Interface.GetCurrentDirectory() + "\\";
-            currentDomain = Environment.UserDomainName;
             Interface.Ping();
         }
-
-        
 
         public void Run(
             RemoteHooking.IContext InContext,
@@ -76,6 +65,11 @@ namespace InjectDLL
                     this);
 
                 WriteFileHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
+
+                //CreateFileHook = LocalHook.Create(
+                //    LocalHook.GetProcAddress("kernel32.dll", "CreateFileW"),
+                //    new DCreateFile(CreateFile_Hooked),
+                //    this);
 
                 ReadFileHook = LocalHook.Create(LocalHook.GetProcAddress("kernel32.dll", "ReadFile"),
                     new DReadFile(ReadFile_Hooked),
@@ -94,7 +88,19 @@ namespace InjectDLL
                     this);
 
                 ReplaceFileHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
-                
+
+                MoveFileExWHook = LocalHook.Create(LocalHook.GetProcAddress("kernel32.dll", "MoveFileExW"),
+                    new DMoveFile(MoveFile_Hooked),
+                    this);
+
+                MoveFileExWHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
+
+                DeleteFileHook = LocalHook.Create(LocalHook.GetProcAddress("kernel32.dll", "DeleteFileW"),
+                    new DDeleteFile(DeleteFile_Hooked),
+                    this);
+
+                DeleteFileHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
+
             }
             catch (Exception ExtInfo)
             {
@@ -115,22 +121,21 @@ namespace InjectDLL
                 {
                     Thread.Sleep(500);
 
+                    // transmit newly monitored file accesses...
+
                     Interface.Ping();
                 }
 
             }
             catch (Exception ex)
             {
+
                 Interface.ReportException(ex);
+                // Ping() will raise an exception if host is unreachable
             }
 
         }
-
         #region KhaiBaoDelegate
-        [UnmanagedFunctionPointer(CallingConvention.StdCall,
-            CharSet = CharSet.Unicode,
-            SetLastError = true)]
-        delegate void UpdateKeyAes();
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall,
            CharSet = CharSet.Auto,
@@ -199,9 +204,27 @@ namespace InjectDLL
            string lpReplacementFileName, string lpBackupFileName,
            ReplaceFileFlags dwReplaceFlags, IntPtr lpExclude, IntPtr lpReserved);
 
+        [UnmanagedFunctionPointer(CallingConvention.StdCall,
+           CharSet = CharSet.Unicode,
+           SetLastError = true)]
+        delegate bool DMoveFile(string lpExistingFileName, string lpNewFileName, MoveFileFlags dwFlags);
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall,
+            CharSet = CharSet.Unicode,
+            SetLastError = true)]
+        delegate bool DDeleteFile(string lpFileName);
         #endregion
 
         #region KhaiBaoAPI
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool DeleteFile(string lpFileName);
+
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        static extern bool MoveFileEx(string lpExistingFileName, string lpNewFileName,
+           MoveFileFlags dwFlags);
+
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         static extern bool ReplaceFile(string lpReplacedFileName,
            string lpReplacementFileName, string lpBackupFileName,
@@ -230,12 +253,19 @@ namespace InjectDLL
             CharSet = CharSet.Unicode,
             SetLastError = true,
             CallingConvention = CallingConvention.StdCall)]
-        static extern IntPtr CreateFile(String InFileName, UInt32 InDesiredAccess, UInt32 InShareMode, IntPtr InSecurityAttributes,
-            UInt32 InCreationDisposition, UInt32 InFlagsAndAttributes, IntPtr InTemplateFile);
+        static extern IntPtr CreateFile(
+            String InFileName,
+            UInt32 InDesiredAccess,
+            UInt32 InShareMode,
+            IntPtr InSecurityAttributes,
+            UInt32 InCreationDisposition,
+            UInt32 InFlagsAndAttributes,
+            IntPtr InTemplateFile);
 
         [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
-        public static extern bool WriteFile(IntPtr hFile, IntPtr lpBuffer, uint nNumberOfBytesToWrite, IntPtr lpNumberOfBytesWritten,
-            [In] ref System.Threading.NativeOverlapped lpOverlapped);
+        public static extern bool WriteFile(IntPtr hFile, IntPtr lpBuffer,
+   uint nNumberOfBytesToWrite, IntPtr lpNumberOfBytesWritten,
+   [In] ref System.Threading.NativeOverlapped lpOverlapped);
 
         [DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         static extern uint GetFinalPathNameByHandle(IntPtr hFile, [MarshalAs(UnmanagedType.LPTStr)] StringBuilder lpszFilePath, uint cchFilePath, uint dwFlags);
@@ -251,9 +281,17 @@ namespace InjectDLL
         public static extern void OutputDebugString(string message);
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        static extern bool CreateProcess(string lpApplicationName, string lpCommandLine, IntPtr lpProcessAttributes,
-           IntPtr lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment,
-           string lpCurrentDirectory, [In] ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
+        static extern bool CreateProcess(
+           string lpApplicationName,
+           string lpCommandLine,
+           IntPtr lpProcessAttributes,
+           IntPtr lpThreadAttributes,
+           bool bInheritHandles,
+           uint dwCreationFlags,
+           IntPtr lpEnvironment,
+           string lpCurrentDirectory,
+           [In] ref STARTUPINFO lpStartupInfo,
+           out PROCESS_INFORMATION lpProcessInformation);
 
         [DllImport("kernel32.dll")]
         public static extern uint SuspendThread(IntPtr hThread);
@@ -277,12 +315,26 @@ namespace InjectDLL
            out uint lpNumberOfBytesTransferred, bool bWait);
 
         [DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        static extern uint SetFilePointer([In] IntPtr hFile, [In] int lDistanceToMove,
-            [Out] out int lpDistanceToMoveHigh, [In] EMoveMethod dwMoveMethod);
+        static extern uint SetFilePointer(
+            [In] IntPtr hFile,
+            [In] int lDistanceToMove,
+            [Out] out int lpDistanceToMoveHigh,
+            [In] EMoveMethod dwMoveMethod);
 
         #endregion
 
         #region KhaiBaoEnumHoacStruct
+        [Flags]
+        enum MoveFileFlags
+        {
+            MOVEFILE_REPLACE_EXISTING = 0x00000001,
+            MOVEFILE_COPY_ALLOWED = 0x00000002,
+            MOVEFILE_DELAY_UNTIL_REBOOT = 0x00000004,
+            MOVEFILE_WRITE_THROUGH = 0x00000008,
+            MOVEFILE_CREATE_HARDLINK = 0x00000010,
+            MOVEFILE_FAIL_IF_NOT_TRACKABLE = 0x00000020
+        }
+
         [Flags]
         enum ReplaceFileFlags : uint
         {
@@ -316,7 +368,7 @@ namespace InjectDLL
         private const uint FILE_NAME_NORMALIZED = 0x0;
         private const uint MAX_PATH = 260;
         [Flags]
-        public enum Protection: uint
+        public enum Protection : uint
         {
             PAGE_NOACCESS = 0x01,
             PAGE_READONLY = 0x02,
@@ -431,89 +483,75 @@ namespace InjectDLL
                 InTemplateFile);
         }
 
-        static bool WriteFile_Hooked(
-            IntPtr hFile, IntPtr lpBuffer,
-            uint nNumberOfBytesToWrite, 
-            IntPtr lpNumberOfBytesWritten,
-            [In] ref System.Threading.NativeOverlapped lpOverlapped)
+        static bool WriteFile_Hooked(IntPtr hFile, IntPtr lpBuffer,
+                uint nNumberOfBytesToWrite, IntPtr lpNumberOfBytesWritten,
+                [In] ref System.Threading.NativeOverlapped lpOverlapped)
         {
 
-            Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
-            Main This = (Main)HookRuntimeInfo.Callback;
             StringBuilder fnPath = new StringBuilder((int)MAX_PATH);
             GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);
             string filePath = fnPath.ToString();
+            Main This = (Main)HookRuntimeInfo.Callback;
+            bool result = false;
+            int extra_size = 0;
             string[] ext = This.Interface.getExtensions();
             string usbDrive = CheckPath(filePath, This.Interface.getUSBDrives());
-
-            if (!string.IsNullOrEmpty(filePath) && !filePath.Contains("Temporary") && !filePath.Contains("AppData") && 
-                CheckExtension(filePath, ext) && !filePath.Contains("~$"))
+            OutputDebugString(filePath);
+            Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
+            if (!string.IsNullOrEmpty(filePath) && !filePath.Contains("Temporary") && !filePath.Contains("AppData") && CheckExtension(filePath, ext) && !filePath.Contains("~$"))
             {
-                OutputDebugString("W filePath: " + filePath);
-                OutputDebugString("W USB: " + usbDrive);
                 try
                 {
-                    OutputDebugString("W Available to encrypt");
                     int fileSize = (int)GetFileSize(hFile, IntPtr.Zero);
                     byte[] bytes = ReadDataFromPointer(lpBuffer, nNumberOfBytesToWrite);
-
-                    #region Get IV
-                    // Get IV from App memory. If IV equals null, auto Generate IV
                     byte[] IV = This.Interface.getIV(filePath);
+                    string key02 = This.Interface.getKey02();
+                    Rfc2898DeriveBytes key = new Rfc2898DeriveBytes(key02, Encoding.ASCII.GetBytes(Salt));
+                    This.aes.Key = key.GetBytes(This.aes.KeySize / 8);
                     if (IV == null)
                     {
-                        IV = new byte[IV_SIZE];
-
                         // Generate IV and block data to encrypt
-                        aes.GenerateIV();
-                        This.Interface.addIV(filePath, aes.IV);
+                        This.aes.GenerateIV();
+                        This.Interface.addIV(filePath, This.aes.IV);
                         string IVstring = "";
-                        for (int i = 0; i < aes.IV.Length; i++)
+                        for (int i = 0; i < This.aes.IV.Length; i++)
                         {
-                            IVstring += (aes.IV[i].ToString() + " ");
+                            IVstring += (This.aes.IV[i].ToString() + " ");
                         }
-
-                        // Prepare Save IV into file
-                        string metadataFilePath = "";
+                        // Save IV into file
+                        List<string> allLines = new List<string>();
+                        string fileData = "";
                         string filePathToSave = "";
+                        OutputDebugString(usbDrive);
                         if (!string.IsNullOrEmpty(usbDrive))
                         {
-                            // Save metadata to USB
-                            filePathToSave = filePath.Substring(filePath.IndexOf(usbDrive) + 1);
-                            metadataFilePath = usbDrive + metadataFileName;
+                            filePathToSave = filePath.Substring(filePath.IndexOf(usbDrive) + 2);
+                            fileData = usbDrive + path;
                         }
                         else
                         {
-                            // Save metadata to App Directory
                             filePathToSave = filePath;
-                            metadataFilePath = This.currentDir + metadataFileName;
+                            fileData = This.currentDir + path;
                         }
-
-                        OutputDebugString("W metadataFilePath: " + metadataFilePath);
-
-                        // Save IV to file
-                        FileHelper.SaveIVToFile(metadataFilePath, filePathToSave, IVstring, This.Interface.GetKey02());
-
-                        OutputDebugString("W IV: " + IVstring);
-                        OutputDebugString("W KEY01: " + This.Interface.GetKey01());
+                        allLines.Add(filePathToSave);
+                        allLines.Add(IVstring);
+                        allLines.Add(key02);
+                        File.AppendAllLines(fileData, allLines);
+                        File.SetAttributes(fileData, FileAttributes.Hidden);
                     }
                     else
                     {
-                        aes.IV = IV;
+                        This.aes.IV = IV;
                     }
-                    #endregion
-
-                    #region Encrypt data
-                    ICryptoTransform encryptor = aes.CreateEncryptor();
+                    ICryptoTransform encryptor = This.aes.CreateEncryptor();
                     MemoryStream msEncrypt = new MemoryStream();
                     CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
                     csEncrypt.Write(This.dataIgnition, 0, MAX_BLOCK_SIZE);
                     csEncrypt.FlushFinalBlock();
                     Array.Copy(msEncrypt.ToArray(), This.dataToEncrypt, MAX_BLOCK_SIZE);
                     msEncrypt.Close();
-                    csEncrypt.Close();                    
+                    csEncrypt.Close();
                     byte[] resultBlock;
-
                     //Encrypt data block by block
                     resultBlock = new byte[nNumberOfBytesToWrite];
                     for (int i = 0; i < nNumberOfBytesToWrite; i = i + MAX_BLOCK_SIZE)
@@ -530,12 +568,9 @@ namespace InjectDLL
                         }
                         Array.Copy(tmpRes, 0, resultBlock, i, nBytesToEncrypt);
                     }
-
+                    // Copy data in byte array into buffer
+                    uint oldProtection = 0;
                     Marshal.Copy(resultBlock, 0, lpBuffer, (int)nNumberOfBytesToWrite);
-
-                    OutputDebugString("W numberofbytetowrite: " + nNumberOfBytesToWrite);
-
-                    #endregion
                 }
                 catch (Exception ex)
                 {
@@ -550,302 +585,7 @@ namespace InjectDLL
                 return WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, ref lpOverlapped);
             }
         }
-        
-        private DReadFile ReadFileFunc;
-        static bool ReadFile_Hooked(
-           IntPtr hFile, 
-           IntPtr lpBuffer,
-           uint nNumberOfBytesToRead,
-           IntPtr lpNumberOfBytesRead, 
-           [In] ref System.Threading.NativeOverlapped lpOverlapped)
-        {
-            Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
-            Main This = (Main)HookRuntimeInfo.Callback;
-            StringBuilder fnPath = new StringBuilder((int)MAX_PATH);
-            GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);
-            string filePath = fnPath.ToString();
-            string[] exts = This.Interface.getExtensions();
-            string usbDrive = CheckPath(filePath, This.Interface.getUSBDrives());
-            bool ReturnValue = false;
 
-
-            if (!CheckExtension(filePath, exts))
-            {
-                return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
-            }
-            else
-            {
-                OutputDebugString("R filePath: " + filePath);
-                OutputDebugString("R USB: " + usbDrive);
-                OutputDebugString("R Available to Decrypt");
-                try
-                {
-                    #region Get IV
-                    // Get IV from App Memory. If IV equals null, read from file and generate block data to decrypt
-                    byte[] IV = This.Interface.getIV(filePath);
-                    if (IV == null)
-                    {
-                        IV = new byte[IV_SIZE];
-                        string metadataFilePath = "";
-                        if (!string.IsNullOrEmpty(usbDrive) && filePath.Contains(usbDrive+":"))
-                        {
-                            // Read metadata from USB
-                            metadataFilePath = usbDrive + metadataFileName;                            
-                        }
-                        else
-                        {
-                            // Read metadata from App Directory
-                            metadataFilePath = This.currentDir + metadataFileName;
-                        }
-
-                        OutputDebugString("R metadataFilePath: " + metadataFilePath);
-                        OutputDebugString("R KEY01: " + This.Interface.GetKey02());
-
-                        // FileHelper read IV from file
-                        if (!FileHelper.ReadIVFromFile(metadataFilePath, filePath, ref IV, This.Interface.GetKey02()))
-                            return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped); ;
-                        
-                        This.Interface.addIV(filePath, IV);
-                    }
-                    OutputDebugString("R IV: " + Encoding.ASCII.GetString(IV));
-
-                    aes.IV = IV;
-                    #endregion
-
-                    #region Decrypt data
-                    ICryptoTransform encryptor = aes.CreateEncryptor();
-                    MemoryStream msEncrypt = new MemoryStream();
-                    CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
-                    csEncrypt.Write(This.dataIgnition, 0, MAX_BLOCK_SIZE);
-                    csEncrypt.FlushFinalBlock();
-                    Array.Copy(msEncrypt.ToArray(), This.dataToEncrypt, MAX_BLOCK_SIZE);
-                    msEncrypt.Close();
-                    csEncrypt.Close();
-
-                    // Get the current offset
-                    int startPos = 0;
-                    int lpDistanceMoveHigh = 0;
-                    int currentOffset = 0;
-                    currentOffset = (int)SetFilePointer(hFile, 0, out lpDistanceMoveHigh, EMoveMethod.Current);
-                    try
-                    {
-                        // if lpOverlapped is a null it will throw an exception
-                        startPos = lpOverlapped.OffsetLow;
-                    }
-                    catch (Exception)
-                    {
-                        startPos = currentOffset;
-                    }
-
-                    // Call original API to get buffer
-                    ReturnValue = This.ReadFileFunc(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
-
-                    // Get number of bytes read
-                    int bytesCount = (int)nNumberOfBytesToRead;
-                    if (!lpNumberOfBytesRead.Equals(IntPtr.Zero) && Marshal.ReadInt32(lpNumberOfBytesRead) != 0)
-                    {
-                        bytesCount = Marshal.ReadInt32(lpNumberOfBytesRead);
-                    }
-
-                    else
-                    {
-                        bytesCount = lpOverlapped.InternalHigh.ToInt32();
-                    }
-
-                    // Read data from buffer 
-                    byte[] bytes = ReadDataFromPointer(lpBuffer, (uint)bytesCount);
-
-                    // Decrypt data and copy it to buffer (replace the encrypted data)
-                    byte[] resultBlock = new byte[bytesCount];
-                    OutputDebugString("Start Pos: " + startPos);
-                    startPos = startPos % MAX_BLOCK_SIZE;
-                    for (int i = 0; i < bytesCount; i++)
-                    {
-                        resultBlock[i] = (byte)(bytes[i] ^ This.dataToEncrypt[(i + startPos) % MAX_BLOCK_SIZE]);
-                    }
-                    Marshal.Copy(resultBlock, 0, lpBuffer, bytesCount);
-
-                    OutputDebugString("bytesCount: " + bytesCount);
-                    #endregion
-
-                }
-                catch (Exception ex)
-                {
-                    OutputDebugString(ex.ToString());
-                }
-                return ReturnValue;
-            }
-        }
-
-        static bool CreateProcess_Hooked(
-           string lpApplicationName,
-           string lpCommandLine,
-           IntPtr lpProcessAttributes,
-           IntPtr lpThreadAttributes,
-           bool bInheritHandles,
-           uint dwCreationFlags,
-           IntPtr lpEnvironment,
-           string lpCurrentDirectory,
-           [In] ref STARTUPINFO lpStartupInfo,
-           out PROCESS_INFORMATION lpProcessInformation)
-        {
-            Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
-            PROCESS_INFORMATION proInformation = new PROCESS_INFORMATION();
-            Main This = (Main)HookRuntimeInfo.Callback;
-            bool ReturnValue = true;
-            string[] defaultPrograms = This.Interface.getDefaultPrograms();
-
-            if ((process.ProcessName.Contains("xplorer")) && CheckProgram(lpApplicationName, defaultPrograms))
-            {
-                OutputDebugString("AppName: " + lpApplicationName);
-                OutputDebugString("CMD: " + lpCommandLine);
-                OutputDebugString("Dictionary: " + lpCurrentDirectory);
-                try
-                {
-                    // Set program to suppend mode and get InjectDLL path
-                    dwCreationFlags = dwCreationFlags | 0x00000004;
-                    ReturnValue = CreateProcess(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes,
-                        false, dwCreationFlags, lpEnvironment, lpCurrentDirectory, ref lpStartupInfo, out proInformation);
-                    string InLibraryPath = 
-                        System.IO.Path.Combine(System.IO.Path.GetDirectoryName(typeof(ProcessInterface).Assembly.Location), "InjectDLL.dll");
-                    while (true)
-                    {
-                        try
-                        {
-                            // Inject DLL
-                            RemoteHooking.Inject(proInformation.dwProcessId, InLibraryPath, InLibraryPath, This.myChannelName);
-                            break;
-                        }
-                        catch (Exception)
-                        {
-                            continue;
-                        }
-                    }
-
-                    OutputDebugString("Create Process: " + lpCommandLine + "-" + proInformation.dwProcessId);
-                }
-                catch (Exception ex)
-                {
-                    OutputDebugString(ex.Message);
-                    This.Interface.ReportException(ex);
-                }
-
-                lpProcessInformation = new PROCESS_INFORMATION();
-                lpProcessInformation.dwProcessId = proInformation.dwProcessId;
-                lpProcessInformation.dwThreadId = proInformation.dwThreadId;
-                lpProcessInformation.hProcess = proInformation.hProcess;
-                lpProcessInformation.hThread = proInformation.hThread;
-
-                return ReturnValue;
-            }
-            else
-            {
-                return CreateProcess(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment, lpCurrentDirectory, ref lpStartupInfo, out lpProcessInformation);
-            }
-
-        }
-
-
-        static bool ReplaceFile_Hooked(
-           string lpReplacedFileName,
-           string lpReplacementFileName, 
-           string lpBackupFileName,
-           ReplaceFileFlags dwReplaceFlags, 
-           IntPtr lpExclude, IntPtr lpReserved)
-        {
-            Main This = (Main)HookRuntimeInfo.Callback;
-            string[] exts = This.Interface.getExtensions();
-            string usbDrive = CheckPath(lpReplacedFileName, This.Interface.getUSBDrives());
-
-            try
-            {
-                if (CheckExtension(lpReplacedFileName, exts) && !lpReplacementFileName.Contains("~$"))
-                {
-                    OutputDebugString("Replace USB: " + usbDrive);
-                    OutputDebugString("Replace Availvabe to replace");
-                    string metadataFilePath;
-
-                    // Get IV from App Memory. If IV equals null, read from file
-                    byte[] IV = This.Interface.getIV(lpReplacedFileName);
-                    if (IV == null)
-                    {
-                        IV = new byte[IV_SIZE];
-
-                        #region Get IV from file
-                        if (!string.IsNullOrEmpty(usbDrive))
-                        {
-                            metadataFilePath = usbDrive + metadataFileName;
-                        }
-                        else
-                        {
-                            metadataFilePath = This.currentDir + metadataFileName;
-                        }
-
-                        OutputDebugString("Replace metadataFilePath: " + metadataFilePath);
-                        OutputDebugString("Replace KEY01: " + This.Interface.GetKey01());
-                        OutputDebugString("Replace KEY02: " + This.Interface.GetKey02());
-
-                        bool hasIV = false;
-                        hasIV = FileHelper.ReadIVFromFile(metadataFilePath, lpReplacedFileName, ref IV, This.Interface.GetKey02());
-                        
-                        // If IV is not exist, generate IV
-                        if (!hasIV)
-                        {
-                            aes.GenerateIV();
-                            This.Interface.addIV(lpReplacedFileName, aes.IV);
-                            string IVstring = "";
-                            for (int i = 0; i < aes.IV.Length; i++)
-                            {
-                                IVstring += (aes.IV[i].ToString() + " ");
-                            }
-
-                            // Save IV into file       
-                            FileHelper.SaveIVToFile(metadataFilePath, lpReplacedFileName, IVstring, This.Interface.GetKey02());
-
-                            OutputDebugString("Replace IV: " + Encoding.ASCII.GetString(IV));
-                        }
-                        #endregion
-
-                        #region Encrypt data
-                        ICryptoTransform encryptor = aes.CreateEncryptor();
-                        MemoryStream msEncrypt = new MemoryStream();
-                        CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
-                        csEncrypt.Write(This.dataIgnition, 0, MAX_BLOCK_SIZE);
-                        csEncrypt.FlushFinalBlock();
-                        Array.Copy(msEncrypt.ToArray(), This.dataToEncrypt, MAX_BLOCK_SIZE);
-                        msEncrypt.Close();
-                        csEncrypt.Close();
-
-                        // Read all data and encrypt
-                        byte[] dataToReplace = File.ReadAllBytes(lpReplacementFileName);
-
-                        OutputDebugString("Replace Read-" + lpReplacedFileName);
-                        for (int i = 0; i < dataToReplace.Length; i++)
-                        {
-                            dataToReplace[i] = (byte)(dataToReplace[i] ^ This.dataToEncrypt[i % MAX_BLOCK_SIZE]);
-                        }
-                        File.WriteAllBytes(lpReplacementFileName, dataToReplace);
-                        OutputDebugString("Replace Write-" + lpReplacementFileName);
-
-                        #endregion
-                    }
-
-                }
-            }
-            catch (Exception ex)
-            {
-                OutputDebugString(ex.ToString());
-            }
-            return ReplaceFile(lpReplacedFileName, lpReplacementFileName, lpBackupFileName, dwReplaceFlags, lpExclude, lpReserved);
-        }
-
-        #region SubFunction
-        /// <summary>
-        /// Check file is in USB
-        /// </summary>
-        /// <param name="filePath"></param>
-        /// <param name="usbDrives"></param>
-        /// <returns></returns>
         private static string CheckPath(string filePath, string[] usbDrives)
         {
             if (usbDrives == null)
@@ -858,12 +598,8 @@ namespace InjectDLL
             return null;
         }
 
-        /// <summary>
-        /// Return data from pointer
-        /// </summary>
-        /// <param name="lpBuffer"></param>
-        /// <param name="nNumberOfBytesToWrite"></param>
-        /// <returns></returns>
+
+        // Read data from pointer
         private static byte[] ReadDataFromPointer(IntPtr lpBuffer, uint nNumberOfBytesToWrite)
         {
             byte[] bytes = new byte[nNumberOfBytesToWrite];
@@ -874,12 +610,402 @@ namespace InjectDLL
             return bytes;
         }
 
-        /// <summary>
-        /// Check file path contain extension supported
-        /// </summary>
-        /// <param name="filePath"></param>
-        /// <param name="exts"></param>
-        /// <returns></returns>
+
+        private DReadFile ReadFileFunc;
+        static bool ReadFile_Hooked(IntPtr hFile, IntPtr lpBuffer,
+           uint nNumberOfBytesToRead, IntPtr lpNumberOfBytesRead, [In] ref System.Threading.NativeOverlapped lpOverlapped)
+        {
+
+            StringBuilder fnPath = new StringBuilder((int)MAX_PATH);
+            GetFinalPathNameByHandle(hFile, fnPath, MAX_PATH, FILE_NAME_NORMALIZED);
+            bool ReturnValue = false;
+            string filePath = fnPath.ToString();
+            Main This = (Main)HookRuntimeInfo.Callback;
+            string[] exts = This.Interface.getExtensions();
+            string key02 = This.Interface.getKey02();
+            //int fileSize = (int)GetFileSize(hFile, IntPtr.Zero);            
+            int offset = 0;
+            string usbDrive = CheckPath(filePath, This.Interface.getUSBDrives());
+            Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
+            if ((!CheckExtension(filePath, exts)))
+            {
+                return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
+            }
+            else
+            {
+                try
+                {
+                    // Get IV from file and generate block data to decrypt
+                    byte[] IV = This.Interface.getIV(filePath);
+                    Rfc2898DeriveBytes key = new Rfc2898DeriveBytes(key02, Encoding.ASCII.GetBytes(Salt));
+                    This.aes.Key = key.GetBytes(This.aes.KeySize / 8);
+                    if (IV == null)
+                    {
+                        string[] data;
+                        if (!string.IsNullOrEmpty(usbDrive))
+                        {
+                            data = File.ReadAllLines(usbDrive + path);
+                        }
+                        else
+                        {
+                            data = File.ReadAllLines(This.currentDir + path);
+                        }
+                        for (int i = data.Length - 1; i >= 0; i--)
+                        {
+                            if (filePath.Contains(data[i]))
+                            {
+                                IV = new byte[This.aes.BlockSize / 8];
+                                string[] IVnumbers = data[i + 1].Split(' ');
+                                if (!key02.Contains(data[i + 2]))
+                                {
+                                    return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
+                                }
+                                for (int j = 0; j < IV.Length; j++)
+                                {
+                                    IV[j] = (byte)int.Parse(IVnumbers[j]);
+                                }
+                                break;
+                            }
+                        }
+                        if (IV == null)
+                            return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
+                        This.Interface.addIV(filePath, IV);
+                    }
+                    This.aes.IV = IV;
+                    ICryptoTransform encryptor = This.aes.CreateEncryptor();
+                    MemoryStream msEncrypt = new MemoryStream();
+                    CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
+                    csEncrypt.Write(This.dataIgnition, 0, MAX_BLOCK_SIZE);
+                    csEncrypt.FlushFinalBlock();
+                    Array.Copy(msEncrypt.ToArray(), This.dataToEncrypt, MAX_BLOCK_SIZE);
+                    msEncrypt.Close();
+                    csEncrypt.Close();
+
+                    // Get the current offset
+                    int startPos = 0;
+                    int oldOffset = -1;
+                    int lpDistanceMoveHigh = 0;
+                    int currentOffset = 0;
+                    currentOffset = (int)SetFilePointer(hFile, 0, out lpDistanceMoveHigh, EMoveMethod.Current);
+                    try
+                    {
+                        // if lpOverlapped is a null it will throw an exception
+                        startPos = lpOverlapped.OffsetLow;
+                    }
+                    catch (Exception ex)
+                    {
+                        startPos = currentOffset;
+                    }
+                    // Call original API to get buffer
+                    ReturnValue = This.ReadFileFunc(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);
+                    // Get number of bytes read
+                    int bytesCount = (int)nNumberOfBytesToRead;
+                    if (!lpNumberOfBytesRead.Equals(IntPtr.Zero) && Marshal.ReadInt32(lpNumberOfBytesRead) != 0)
+                    {
+                        bytesCount = Marshal.ReadInt32(lpNumberOfBytesRead);
+                    }
+
+                    else
+                    {
+                        bytesCount = lpOverlapped.InternalHigh.ToInt32();
+                    }
+                    // Read data from buffer 
+                    byte[] bytes = ReadDataFromPointer(lpBuffer, (uint)bytesCount);
+
+                    // Decrypt data and copy it to buffer (replace the encrypted data)
+                    // ---- Cach 2 ----
+                    byte[] resultBlock = new byte[bytesCount];
+                    OutputDebugString("Start Pos: " + startPos);
+                    startPos = startPos % MAX_BLOCK_SIZE;
+                    for (int i = 0; i < bytesCount; i++)
+                    {
+                        resultBlock[i] = (byte)(bytes[i] ^ This.dataToEncrypt[(i + startPos) % MAX_BLOCK_SIZE]);
+                    }
+                    Marshal.Copy(resultBlock, 0, lpBuffer, bytesCount);
+                    // ---- Cach 2 ----
+
+                    //lock (This.Queue)
+                    //{
+                    //    DateTime now = DateTime.Now;
+                    //    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-ReadFile:" +
+                    //        RemoteHooking.GetCurrentThreadId() + ":" + bytesCount + "]:" + "-" + fnPath + "-" + currentOffset + "\n");
+                    //}
+
+                }
+                catch (Exception ex)
+                {
+                    OutputDebugString(ex.ToString());
+                }
+                return ReturnValue;
+            }
+        }
+
+        static bool CreateProcess_Hooked(string lpApplicationName,
+           string lpCommandLine,
+           IntPtr lpProcessAttributes,
+           IntPtr lpThreadAttributes,
+           bool bInheritHandles,
+           uint dwCreationFlags,
+           IntPtr lpEnvironment,
+           string lpCurrentDirectory,
+           [In] ref STARTUPINFO lpStartupInfo,
+           out PROCESS_INFORMATION lpProcessInformation)
+        {
+            PROCESS_INFORMATION proInformation = new PROCESS_INFORMATION();
+            bool ReturnValue = true;
+            Main This = (Main)HookRuntimeInfo.Callback;
+            Process process = Process.GetProcessById(RemoteHooking.GetCurrentProcessId());
+            string[] defaultPrograms = This.Interface.getDefaultPrograms();
+            if ((process.ProcessName.Contains("xplorer")) && CheckProgram(lpApplicationName, defaultPrograms))
+            {
+                try
+                {
+                    dwCreationFlags = dwCreationFlags | 0x00000004;
+                    ReturnValue = CreateProcess(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, false, dwCreationFlags, lpEnvironment, lpCurrentDirectory, ref lpStartupInfo, out proInformation);
+                    string InLibraryPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(typeof(ProcessInterface).Assembly.Location), "InjectDLL.dll");
+                    while (true)
+                    {
+                        try
+                        {
+                            RemoteHooking.Inject(proInformation.dwProcessId, InLibraryPath, InLibraryPath, This.myChannelName);
+                            break;
+                        }
+                        catch (Exception)
+                        {
+                            continue;
+                        }
+                    }
+
+                    //lock (This.Queue)
+                    //{
+                    //    DateTime now = DateTime.Now;
+                    //    This.Queue.Push("[" + RemoteHooking.GetCurrentProcessId() + "-CreateProcess:" +
+                    //        RemoteHooking.GetCurrentThreadId() + "]:" + "-" + lpCommandLine + "-" + proInformation.dwProcessId + "\n");
+
+                    //}
+                    OutputDebugString("Create Process: " + lpCommandLine + "-" + proInformation.dwProcessId);
+                }
+                catch (Exception ex)
+                {
+                    OutputDebugString(ex.Message);
+                    This.Interface.ReportException(ex);
+                }
+                lpProcessInformation = new PROCESS_INFORMATION();
+                lpProcessInformation.dwProcessId = proInformation.dwProcessId;
+                lpProcessInformation.dwThreadId = proInformation.dwThreadId;
+                lpProcessInformation.hProcess = proInformation.hProcess;
+                lpProcessInformation.hThread = proInformation.hThread;
+
+
+                return ReturnValue;
+            }
+            else
+            {
+                return CreateProcess(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment, lpCurrentDirectory, ref lpStartupInfo, out lpProcessInformation);
+            }
+
+        }
+
+
+        static bool ReplaceFile_Hooked(string lpReplacedFileName,
+           string lpReplacementFileName, string lpBackupFileName,
+           ReplaceFileFlags dwReplaceFlags, IntPtr lpExclude, IntPtr lpReserved)
+        {
+            Main This = (Main)HookRuntimeInfo.Callback;
+            string[] exts = This.Interface.getExtensions();
+            string usbDrive = CheckPath(lpReplacedFileName, This.Interface.getUSBDrives());
+            try
+            {
+                OutputDebugString("Replace!!!" + lpReplacedFileName + lpReplacementFileName);
+                if (CheckExtension(lpReplacedFileName, exts) && !lpReplacementFileName.Contains("~$"))
+                {
+                    string dataFile;
+                    string key02 = This.Interface.getKey02();
+                    Rfc2898DeriveBytes key = new Rfc2898DeriveBytes(key02, Encoding.ASCII.GetBytes(Salt));
+                    This.aes.Key = key.GetBytes(This.aes.KeySize / 8);
+                    byte[] IV = This.Interface.getIV(lpReplacedFileName);
+                    if (IV == null)
+                    {
+                        if (!string.IsNullOrEmpty(usbDrive))
+                        {
+                            dataFile = usbDrive + path;
+                        }
+                        else
+                        {
+                            dataFile = This.currentDir + path;
+                        }
+                        bool hasIV = false;
+                        IV = new byte[This.aes.BlockSize / 8];
+                        string[] data = File.ReadAllLines(dataFile);
+                        for (int i = data.Length - 1; i >= 0; i--)
+                        {
+                            if (lpReplacedFileName.Contains(data[i]))
+                            {
+                                string[] IVnumbers = data[i + 1].Split(' ');
+                                for (int j = 0; j < IV.Length; j++)
+                                {
+                                    IV[j] = (byte)int.Parse(IVnumbers[j]);
+                                }
+                                hasIV = true;
+                                break;
+                            }
+                        }
+                        if (!hasIV)
+                        {
+                            OutputDebugString("Chua co IV");
+                            This.aes.GenerateIV();
+                            string IVstring = "";
+                            for (int i = 0; i < This.aes.IV.Length; i++)
+                            {
+                                IVstring += (This.aes.IV[i].ToString() + " ");
+                            }
+                            List<string> tmpData = new List<string>();
+                            // Save IV into file                      
+                            tmpData.Add(lpReplacedFileName);
+                            tmpData.Add(IVstring);
+                            tmpData.Add(key02);
+                            File.AppendAllLines(dataFile, tmpData);
+                            File.SetAttributes(dataFile, FileAttributes.Hidden);
+                        }
+                        else
+                        {
+                            This.aes.IV = IV;
+                        }
+                        This.Interface.addIV(lpReplacedFileName, This.aes.IV);
+                    }
+                    OutputDebugString("Get IV");
+                    ICryptoTransform encryptor = This.aes.CreateEncryptor();
+                    MemoryStream msEncrypt = new MemoryStream();
+                    CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
+                    csEncrypt.Write(This.dataIgnition, 0, MAX_BLOCK_SIZE);
+                    csEncrypt.FlushFinalBlock();
+                    Array.Copy(msEncrypt.ToArray(), This.dataToEncrypt, MAX_BLOCK_SIZE);
+                    msEncrypt.Close();
+                    csEncrypt.Close();
+                    byte[] dataToReplace = File.ReadAllBytes(lpReplacementFileName);
+                    OutputDebugString("Replace Read-" + lpReplacedFileName);
+                    for (int i = 0; i < dataToReplace.Length; i++)
+                    {
+                        dataToReplace[i] = (byte)(dataToReplace[i] ^ This.dataToEncrypt[i % MAX_BLOCK_SIZE]);
+                    }
+                    File.WriteAllBytes(lpReplacementFileName, dataToReplace);
+                    OutputDebugString("Replace Write-" + lpReplacementFileName);
+                }
+            }
+            catch (Exception ex)
+            {
+                OutputDebugString(ex.ToString());
+            }
+            return ReplaceFile(lpReplacedFileName, lpReplacementFileName, lpBackupFileName, dwReplaceFlags, lpExclude, lpReserved);
+        }
+
+        static bool MoveFile_Hooked(string lpExistingFileName, string lpNewFileName,
+           MoveFileFlags dwFlags)
+        {
+
+            Main This = (Main)HookRuntimeInfo.Callback;
+            string[] exts = This.Interface.getExtensions();
+            string usbDrive = CheckPath(lpNewFileName, This.Interface.getUSBDrives());
+            try
+            {
+                if (CheckExtension(lpNewFileName, exts) && !lpExistingFileName.Contains("~$"))
+                {
+                    string dataFile;
+                    string key02 = This.Interface.getKey02();
+                    Rfc2898DeriveBytes key = new Rfc2898DeriveBytes(key02, Encoding.ASCII.GetBytes(Salt));
+                    This.aes.Key = key.GetBytes(This.aes.KeySize / 8);
+                    byte[] IV = This.Interface.getIV(lpNewFileName);
+                    if (IV == null)
+                    {
+                        if (!string.IsNullOrEmpty(usbDrive))
+                        {
+                            dataFile = usbDrive + path;
+                        }
+                        else
+                        {
+                            dataFile = This.currentDir + path;
+                        }
+                        bool hasIV = false;
+                        IV = new byte[This.aes.BlockSize / 8];
+                        if (File.Exists(dataFile))
+                        {
+                            string[] data = File.ReadAllLines(dataFile);
+                            for (int i = data.Length - 1; i >= 0; i--)
+                            {
+                                if (lpNewFileName.Contains(data[i]))
+                                {
+                                    string[] IVnumbers = data[i + 1].Split(' ');
+                                    for (int j = 0; j < IV.Length; j++)
+                                    {
+                                        IV[j] = (byte)int.Parse(IVnumbers[j]);
+                                    }
+                                    hasIV = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!hasIV)
+                        {
+                            OutputDebugString("Chua co IV");
+                            This.aes.GenerateIV();
+                            string IVstring = "";
+                            for (int i = 0; i < This.aes.IV.Length; i++)
+                            {
+                                IVstring += (This.aes.IV[i].ToString() + " ");
+                            }
+                            List<string> tmpData = new List<string>();
+                            // Save IV into file     
+                            if (lpNewFileName.Contains(usbDrive))
+                            {
+                                lpNewFileName = lpNewFileName.Substring(lpNewFileName.IndexOf(usbDrive) + 2);
+                            }
+                            tmpData.Add(lpNewFileName);
+                            tmpData.Add(IVstring);
+                            tmpData.Add(key02);
+                            File.AppendAllLines(dataFile, tmpData);
+                            File.SetAttributes(dataFile, FileAttributes.Hidden);
+                        }
+                        else
+                        {
+                            This.aes.IV = IV;
+                        }
+                        This.Interface.addIV(lpNewFileName, This.aes.IV);
+                    }
+                    OutputDebugString("Get IV");
+                    ICryptoTransform encryptor = This.aes.CreateEncryptor();
+                    MemoryStream msEncrypt = new MemoryStream();
+                    CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
+                    csEncrypt.Write(This.dataIgnition, 0, MAX_BLOCK_SIZE);
+                    csEncrypt.FlushFinalBlock();
+                    Array.Copy(msEncrypt.ToArray(), This.dataToEncrypt, MAX_BLOCK_SIZE);
+                    msEncrypt.Close();
+                    csEncrypt.Close();
+                    byte[] dataToReplace = File.ReadAllBytes(lpExistingFileName);
+                    OutputDebugString("Replace Read-" + lpNewFileName);
+                    for (int i = 0; i < dataToReplace.Length; i++)
+                    {
+                        dataToReplace[i] = (byte)(dataToReplace[i] ^ This.dataToEncrypt[i % MAX_BLOCK_SIZE]);
+                    }
+                    File.WriteAllBytes(lpExistingFileName, dataToReplace);
+                    OutputDebugString("Replace Write-" + lpExistingFileName);
+                }
+            }
+            catch (Exception ex)
+            {
+                OutputDebugString(ex.ToString());
+            }
+            return MoveFileEx(lpExistingFileName, lpNewFileName, dwFlags);
+        }
+
+
+        static bool DeleteFile_Hooked(string lpFileName)
+        {
+            if (!lpFileName.Contains(path))
+                return DeleteFile(lpFileName);
+            else
+                return false;
+        }
+
         private static bool CheckExtension(string filePath, string[] exts)
         {
             foreach (var ext in exts)
@@ -890,12 +1016,6 @@ namespace InjectDLL
             return false;
         }
 
-        /// <summary>
-        /// Check application is a default program
-        /// </summary>
-        /// <param name="lpApplicationName"></param>
-        /// <param name="defaultPrograms"></param>
-        /// <returns></returns>
         private static bool CheckProgram(string lpApplicationName, string[] defaultPrograms)
         {
             for (int i = 0; i < defaultPrograms.Length; i++)
@@ -905,7 +1025,6 @@ namespace InjectDLL
             }
             return false;
         }
-        #endregion
 
         #endregion
     }
