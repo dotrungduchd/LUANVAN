@@ -7,3 +7,8 @@ D:\Code\DemoHackingApp\DemoHackingApp\bin\Debug\InjectDLL.dll
 D:\Code\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.csprojResolveAssemblyReference.cache
 D:\Code\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.dll
 D:\Code\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.pdb
+E:\HK1_14-15\KhoaLuan\GitHub\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\bin\Debug\InjectDLL.dll
+E:\HK1_14-15\KhoaLuan\GitHub\LUANVAN\Tam\DemoHackingApp\DemoHackingApp\bin\Debug\InjectDLL.pdb
+E:\HK1_14-15\KhoaLuan\GitHub\LUANVAN\Tam\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.csprojResolveAssemblyReference.cache
+E:\HK1_14-15\KhoaLuan\GitHub\LUANVAN\Tam\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.dll
+E:\HK1_14-15\KhoaLuan\GitHub\LUANVAN\Tam\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.pdb

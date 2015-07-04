@@ -503,8 +503,7 @@ namespace InjectDLL
                         {
                             // Save metadata to USB
                             filePathToSave = filePath.Substring(filePath.IndexOf(usbDrive) + 1);
-                            fileData = usbDrive + metadataFileName;
-                            allLines.Add(This.currentDomain);
+                            fileData = usbDrive + metadataFileName;                            
                         }
                         else
                         {
@@ -513,11 +512,12 @@ namespace InjectDLL
                             fileData = This.currentDir + metadataFileName;
                         }
                         // Save to file
-                        //allLines.Add(filePathToSave);
-                        //allLines.Add(IVstring);                        
-                        //File.AppendAllLines(fileData, allLines);
-                        //File.SetAttributes(fileData, FileAttributes.Hidden);
-                        FileHelper.SaveIVToFile(fileData, filePathToSave, IVstring);
+                        allLines.Add(This.currentDomain);
+                        allLines.Add(filePathToSave);
+                        allLines.Add(IVstring);
+                        File.AppendAllLines(fileData, allLines);
+                        File.SetAttributes(fileData, FileAttributes.Hidden);
+                        //FileHelper.SaveIVToFile(fileData, filePathToSave, IVstring);
                     }
                     else
                     {
@@ -615,9 +615,30 @@ namespace InjectDLL
                         }
 
                         // FileHelper read IV from file
-                        if (!FileHelper.ReadIVFromFile(metadataFilePath, filePath, ref IV))
-                            return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped); ;
-                        
+                        //if (!FileHelper.ReadIVFromFile(metadataFilePath, filePath, ref IV))
+                        //    return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, ref lpOverlapped);                        
+                        string[] data = File.ReadAllLines(filePath);
+                        for (int i = data.Length - 1; i >= 0; i--)
+                        {
+                            if (filePath.Contains(data[i]))
+                            {
+                                // Get IV
+                                if (data[i + 1] != null)
+                                {
+                                    string[] IVnumbers = data[i + 1].Split(' ');
+                                    for (int j = 0; j < IV.Length; j++)
+                                    {
+                                        IV[j] = (byte)int.Parse(IVnumbers[j]);
+                                    }
+                                    // Verify IV to authenticate user
+                                    if (data[i + 2] != null && Signer.Verity(IV, Convert.FromBase64String(data[i + 2]), Global.KEY01, Global.KEY02))
+                                        break;
+                                }
+
+                                IV = null;
+                                break;
+                            }
+                        }
                         This.Interface.addIV(filePath, IV);
                     }
 

@@ -73,7 +73,6 @@
       <DependentUpon>ExtensionsForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Optional\FileExtensions.cs" />
-    <Compile Include="Optional\FileHelper.cs" />
     <Compile Include="Forms\HackingAppForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -81,6 +80,7 @@
       <DependentUpon>HackingAppForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Global.cs" />
+    <Compile Include="Optional\FileHelper.cs" />
     <Compile Include="ProcessInterface.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
