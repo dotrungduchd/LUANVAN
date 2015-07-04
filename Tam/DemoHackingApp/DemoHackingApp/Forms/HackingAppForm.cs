@@ -22,6 +22,8 @@ namespace DemoHackingApp
         public HackingAppForm()
         {
             InitializeComponent();
+
+            MessageBox.Show(Global.KEY01);
         }
 
         #region Import dll
@@ -151,6 +153,8 @@ namespace DemoHackingApp
             {
                 registryKey.SetValue("DemoHackingApp", Application.ExecutablePath);
             }
+
+            #region USB
             lock (Global.USBExist)
             {
                 DriveInfo[] drives = DriveInfo.GetDrives().Where(x => x.DriveType == DriveType.Removable).ToArray();
@@ -172,6 +176,8 @@ namespace DemoHackingApp
             ManagementEventWatcher removeWatcher = new ManagementEventWatcher(removeQuery);
             removeWatcher.EventArrived += new EventArrivedEventHandler(DeviceRemovedEvent);
             removeWatcher.Start();
+
+            #endregion
 
             RemoteHooking.IpcCreateServer<ProcessInterface>(ref ChannelName, WellKnownObjectMode.SingleCall);
 
@@ -267,18 +273,18 @@ namespace DemoHackingApp
 
         private void btExtensions_Click(object sender, EventArgs e)
         {
-
+            ExtensionsForm extForm = new ExtensionsForm();
+            extForm.Show();
         }
 
         private void btAuthenticate_Click(object sender, EventArgs e)
         {
-            //Global.authForm.Show();
-
+            AuthenticationForm authForm = new AuthenticationForm();
+            authForm.Show();
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void HackingAppForm_FormClosed(object sender, FormClosedEventArgs e)
         {
-
         }
 
     }

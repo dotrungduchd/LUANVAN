@@ -43,7 +43,7 @@
             ".docx",
             ".xls",
             ".xlsx",
-            " .ppt",
+            ".ppt",
             ".pptx",
             ".pdf",
             ".rar",

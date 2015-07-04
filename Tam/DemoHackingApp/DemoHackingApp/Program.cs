@@ -19,8 +19,8 @@ namespace DemoHackingApp
 
             LoadAppSetting();
 
-            //Application.Run(new HackingAppForm());
-            Application.Run(new AuthenticationForm());
+            Application.Run(new HackingAppForm());
+            //Application.Run(new AuthenticationForm());
             //Application.Run(new ExtensionsForm());
 
         }

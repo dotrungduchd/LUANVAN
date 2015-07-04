@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using InjectDLL;
 
 namespace DemoHackingApp
 {
@@ -15,12 +16,20 @@ namespace DemoHackingApp
         {
             InitializeComponent();
 
+            // Load Previous Setting
             if (Global.AUTH_TYPE == (int)AuthType.Personal)
             {
                 pnDomain.Enabled = false;
                 rbPersonnal.Checked = true;
 
-                tbID.Text = Global.ID;
+                if (Config.GetAppSetting(Config.REMEMBER_ME) == "True")
+                    isRememberMe = true;
+                if (isRememberMe)
+                {
+                    tbID.Text = Global.ID;
+                    tbPassword.Text = Global.PASSWORD;
+                    cbRememberMe.Checked = isRememberMe;
+                }
             }
             else
             {
@@ -30,15 +39,13 @@ namespace DemoHackingApp
                 rbOnlyMe.Checked = Global.DOMAIN_PERMIT == (int)DomainPermission.OnlyMe;
                 rbAllUserDomain.Checked = Global.DOMAIN_PERMIT == (int)DomainPermission.AllUserInDomain;
                 rbSomeOneDomain.Checked = Global.DOMAIN_PERMIT == (int)DomainPermission.SomeUserInDomain;
+                DomainPermit = Global.DOMAIN_PERMIT;
             }
 
         }
 
         private void AuthenticationForm_Load(object sender, EventArgs e)
         {
-            if (Config.GetAppSetting(Config.REMEMBER_ME) == "True")
-                isRememberMe = true;
-            cbRememberMe.Enabled = isRememberMe;
 
 
         }
@@ -53,7 +60,7 @@ namespace DemoHackingApp
         bool isRememberMe = false;
         private void cbRememberMe_CheckedChanged(object sender, EventArgs e)
         {
-            isRememberMe = cbRememberMe.Enabled;
+            isRememberMe = cbRememberMe.Checked;
 
         }
 
@@ -64,28 +71,60 @@ namespace DemoHackingApp
         /// <param name="e"></param>
         private void btAuth_Click(object sender, EventArgs e)
         {
-            #region Persional
-            // Update Global ID Password variable
-            Global.ID = tbID.Text;
-            Global.PASSWORD = tbPassword.Text;
-            Global.REMEMBER_ME = isRememberMe;
+            if (rbPersonnal.Checked == true)
+            {
+                Global.AUTH_TYPE = (int)AuthType.Personal;
 
-            // Update Rememberme
-            Config.UpdateAppSetting(Config.REMEMBER_ME, isRememberMe.ToString());
+                #region Persional
+                // Validate
+                if (tbID.Text == "" || tbPassword.Text == "")
+                {
+                    MessageBox.Show("ID and Password can not be null");
+                    return;
+                }
 
-            // Save ID+password if app is remember info
-            Config.AddAppSetting(Config.ID, Global.ID);
-            Config.AddAppSetting(Config.PASSWORD, Global.PASSWORD);
-            #endregion
+                if (tbID.Text.Length < 3 || tbPassword.Text.Length < 3)
+                {
+                    MessageBox.Show("ID and Password length at least 4 charactor");
+                    return;
+                }
 
-            #region Domain
-            // Update global variable
-            Global.DOMAIN_PERMIT = DomainPermit;
+                // Update Global ID Password variable
+                Global.ID = Global.KEY01 = tbID.Text;
+                Global.PASSWORD = Global.KEY02 = tbPassword.Text;
+                Global.REMEMBER_ME = isRememberMe;
 
-            // Save to config file
-            Config.UpdateAppSetting(Config.DOMAIN_PERMIT, Global.DOMAIN_PERMIT.ToString());
+                // Save ID+password if app is remember info
+                Config.AddAppSetting(Config.ID, Global.ID);
+                Config.AddAppSetting(Config.PASSWORD, Global.PASSWORD);
+                Config.UpdateAppSetting(Config.REMEMBER_ME, isRememberMe.ToString());
+                #endregion
+            }
+            else if (rbDomain.Checked == true)
+            {
+                Global.AUTH_TYPE = (int)AuthType.Domain;
 
-            #endregion
+                #region Domain
+                // Update global variable
+                Global.DOMAIN_PERMIT = DomainPermit;
+                Global.USER_DOMAIN_NAME = Global.KEY01 = Global.GetUserDomainName();
+                Global.DOMAIN_NAME = Global.KEY02 = Global.GetDomainName();
+
+                if (Global.DOMAIN_NAME == "")
+                {
+                    MessageBox.Show("Your are not in Active Domain");
+                    return;
+                }
+
+                // Save to config file
+                Config.UpdateAppSetting(Config.DOMAIN_PERMIT, Global.DOMAIN_PERMIT.ToString());
+
+                #endregion
+            }
+            Config.UpdateAppSetting(Config.AUTH_TYPE, Global.AUTH_TYPE.ToString());
+
+
+            this.Close();
         }
 
         #endregion

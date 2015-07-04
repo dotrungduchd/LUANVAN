@@ -14,6 +14,27 @@ namespace DemoHackingApp
         public ExtensionsForm()
         {
             InitializeComponent();
+            Global.GetListExtensions();
+
+            LoadExtenssions();
+        }
+
+        private void LoadExtenssions()
+        {
+            List<string> listExts = Config.GetListExtensions();
+            for (int j = 0; j < clbExts.Items.Count; j++)
+            {
+                clbExts.SetItemCheckState(j, CheckState.Unchecked);
+                for (int i = 0; i < listExts.Count; i++)
+                {
+                    if (listExts[i] == clbExts.Items[j].ToString())
+                    {
+                        clbExts.SetItemCheckState(j, CheckState.Checked);
+                        break;
+                    }
+                    
+                }
+            }
         }
 
         List<string> listExt = new List<string>();
@@ -32,7 +53,8 @@ namespace DemoHackingApp
         private void btOK_Click(object sender, EventArgs e)
         {
             Config.SaveListExtensions(listExt);
-            //Global.extsForm.Hide();
+
+            this.Close();
         }
 
     }

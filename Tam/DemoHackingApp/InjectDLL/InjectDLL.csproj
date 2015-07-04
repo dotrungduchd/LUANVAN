@@ -30,6 +30,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="DemoHackingApp, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\DemoHackingApp\obj\Debug\DemoHackingApp.exe</HintPath>
+    </Reference>
     <Reference Include="EasyHook, Version=2.7.5558.0, Culture=neutral, PublicKeyToken=4b580fca19d0b0c5, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\DemoHackingApp\bin\Debug\EasyHook.dll</HintPath>
@@ -44,15 +48,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FileHelper.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\DemoHackingApp\DemoHackingApp.csproj">
-      <Project>{ab8521bd-e4dc-4ffb-ab41-751b6e885402}</Project>
-      <Name>DemoHackingApp</Name>
-    </ProjectReference>
+    <Compile Include="Signer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
