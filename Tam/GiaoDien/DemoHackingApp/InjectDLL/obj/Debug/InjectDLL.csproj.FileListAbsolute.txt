@@ -1,0 +1,15 @@
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.csprojResolveAssemblyReference.cache
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\bin\Debug\InjectDLL.dll
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\bin\Debug\InjectDLL.pdb
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.dll
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.pdb
+D:\Final\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.csprojResolveAssemblyReference.cache
+D:\Final\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.dll
+D:\Final\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.pdb
+D:\Final\DemoHackingApp\DemoHackingApp\bin\Debug\InjectDLL.dll
+D:\Final\DemoHackingApp\DemoHackingApp\bin\Debug\InjectDLL.pdb
+D:\Final - Copy\DemoHackingApp\DemoHackingApp\bin\Debug\InjectDLL.dll
+D:\Final - Copy\DemoHackingApp\DemoHackingApp\bin\Debug\InjectDLL.pdb
+D:\Final - Copy\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.csprojResolveAssemblyReference.cache
+D:\Final - Copy\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.dll
+D:\Final - Copy\DemoHackingApp\InjectDLL\obj\Debug\InjectDLL.pdb
