@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <FileExtensions>
+    <add key=".doc" value="True" />
+    <add key=".docx" value="True" />
+    <add key=".xls" value="True" />
+    <add key=".xlsx" value="True" />
+    <add key=".ppt" value="True" />
+    <add key=".pptx" value="True" />
+    <add key=".pdf" value="True" />
+    <add key=".rar" value="True" />
+    <add key=".zip" value="True" />
+  </FileExtensions>
+  <appSettings>
+    <add key="AuthType" value="0" />
+    <add key="RememberMe" value="True" />
+    <add key="ID" value="dotrungduchd" />
+    <add key="Password" value="tinhvenoidau" />
+    <add key="DomainName" value="DOMAIN" />
+    <add key="UserDomainName" value="domail.local" />
+    <add key="DomainPermit" value="2" />
+  </appSettings>
+</configuration>

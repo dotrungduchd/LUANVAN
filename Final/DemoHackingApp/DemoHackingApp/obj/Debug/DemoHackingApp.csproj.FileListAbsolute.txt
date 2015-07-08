@@ -1,0 +1,29 @@
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\bin\Debug\DemoHackingApp.exe
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\bin\Debug\DemoHackingApp.pdb
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.csprojResolveAssemblyReference.cache
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.HackingAppForm.resources
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.Properties.Resources.resources
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.csproj.GenerateResource.Cache
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.exe.licenses
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.exe
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.pdb
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\bin\Debug\C1.Win.C1Input.4.dll
+E:\HK1_14-15\KhoaLuan\DemoHackingApp\DemoHackingApp\bin\Debug\C1.Win.C1Input.4.xml
+D:\Final\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.exe
+D:\Final\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.pdb
+D:\Final\DemoHackingApp\DemoHackingApp\bin\Debug\DemoHackingApp.exe
+D:\Final\DemoHackingApp\DemoHackingApp\bin\Debug\DemoHackingApp.pdb
+D:\Final\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.HackingAppForm.resources
+D:\Final\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.Properties.Resources.resources
+D:\Final\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.csproj.GenerateResource.Cache
+D:\Final\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.exe.licenses
+D:\Final - Copy\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.exe
+D:\Final - Copy\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.pdb
+D:\Final - Copy\DemoHackingApp\DemoHackingApp\bin\Debug\DemoHackingApp.exe
+D:\Final - Copy\DemoHackingApp\DemoHackingApp\bin\Debug\DemoHackingApp.pdb
+D:\Final - Copy\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.HackingAppForm.resources
+D:\Final - Copy\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.Properties.Resources.resources
+D:\Final - Copy\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.csproj.GenerateResource.Cache
+D:\Final - Copy\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.exe.licenses
+D:\Final - Copy\DemoHackingApp\DemoHackingApp\bin\Debug\DemoHackingApp.exe.config
+D:\Final\DemoHackingApp\DemoHackingApp\obj\Debug\DemoHackingApp.csprojResolveAssemblyReference.cache
